@@ -52,19 +52,6 @@ The current `docker list` command reads only minimal container identity labels a
 - Stable output and migration compatibility constrain later schema changes.
 - Provider resource semantics can diverge from local runtime measurements.
 
-## Planned work units
+## Delivery roadmap
 
-Each work unit should remain independently testable and reviewable, with tests and documentation included alongside every behavior it introduces:
-
-1. Bootstrap the architecture, CLI shell, path policy, project documentation, and CI.
-2. Implement Docker discovery and stable container and workload identity.
-3. Add embedded SQLite schema and migrations, connection pragmas, concrete repositories, atomic sample batches, and `csizer init`. **Current.**
-4. Collect resource samples and lifecycle events through the first `ContainerSource` and `SampleWriter` implementations.
-5. Add the daemon with restart recovery, lifecycle coordination, and periodic reconciliation.
-6. Build workload aggregates and representative-window analysis from persisted samples.
-7. Produce CPU and memory recommendations with evidence, confidence, assumptions, and warnings.
-8. Translate normalized recommendations into valid ECS Fargate CPU and memory settings.
-9. Expose track, list, inspect, and recommend workflows with stable human-readable and machine-readable outputs.
-10. Add Homebrew packaging, release automation, and installation verification.
-11. Add npm and pnpm distribution wrappers with platform binary resolution and installation verification.
-12. Complete operator and contributor documentation, compatibility checks, privacy review, and release hardening.
+Architecture records durable technical boundaries and decisions; mutable delivery status belongs in the [canonical roadmap](roadmap.md). Keep each roadmap work unit independently testable and reviewable, with tests and documentation included alongside the behavior it introduces.

@@ -58,7 +58,7 @@ csizer recommend backend --provider ecs-fargate
 
 The design keeps identity and future analysis independent from container runtimes, persistence, provider formats, and output rendering. Moby SDK types remain confined to the Docker adapter, and SQLite migrations are embedded in the binary.
 
-See [docs/architecture.md](docs/architecture.md) for package boundaries, runtime and SQLite plans, risks, and the 12 planned work units.
+See [docs/architecture.md](docs/architecture.md) for package boundaries, runtime and SQLite plans, and risks.
 
 ## Privacy
 
@@ -66,7 +66,7 @@ ContainerSize is local-first. The current `docker list` command reads only the m
 
 ## Roadmap
 
-Embedded SQLite persistence is the current phase. The roadmap continues through collection, daemon reliability, analysis, recommendation, ECS adaptation, CLI workflows, packaging, and hardening. No tracking command, collector, daemon, retention process, provider, or packaging code exists yet.
+Phases 1-3 are complete, and phase 4 (collector and events) is next. See the [canonical roadmap](docs/roadmap.md) for current progress, acceptance status, and the next work unit.
 
 ## Contributing
 

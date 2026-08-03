@@ -1,0 +1,74 @@
+# ContainerSize roadmap
+
+**Current state:** Phases 1-3 are complete. Phase 4 is next. Last updated: 2026-08-04.
+
+This document is the single source of truth for mutable project progress.
+
+## Statuses
+
+| Status | Meaning |
+| --- | --- |
+| Complete | Delivered, verified, and committed. |
+| Next | The next bounded work unit. |
+| Pending | Planned but not started. |
+| Partial | Some acceptance evidence exists, but the criterion is not complete end to end. |
+| Blocked | Cannot proceed until a named dependency or decision is resolved. |
+
+## Delivery phases
+
+| Phase | Scope | Status | Delivered outcome or target | Commit evidence |
+| --- | --- | --- | --- | --- |
+| 1 | Architecture and CI | Complete | Modular CLI foundation, platform path policy, project documentation, tests, linting, CI, and cross-platform builds. | `1e143c5`, `b0ff68a`, `5b55bf3` |
+| 2 | Docker discovery and identity | Complete | Read-only Docker discovery, stable workload identity, and `csizer docker list`. | `7901d84`, `999c0c0`, `3e74cb6` |
+| 3 | SQLite, migrations, and init | Complete | Embedded checksummed migrations, secure SQLite Store and repositories, atomic metric batches, Docker health check, and `csizer init`. | `6e7ddb4`, `237088a`, `0f6bdd1`, `ee67484` |
+| 4 | Collector and events | Next | Decode Docker stats, normalize lifecycle events, and persist observations through the existing batch Store. | - |
+| 5 | Daemon | Pending | Add background lifecycle, restart recovery, coordination, and periodic reconciliation. | - |
+| 6 | Aggregates and analysis | Pending | Build workload aggregates and representative-window analysis from persisted samples. | - |
+| 7 | Recommendation and confidence | Pending | Produce CPU and memory recommendations with evidence, confidence, assumptions, and warnings. | - |
+| 8 | ECS Fargate adapter | Pending | Translate normalized recommendations into valid ECS Fargate CPU and memory settings. | - |
+| 9 | CLI tracking, query, and outputs | Pending | Expose tracking and query workflows with stable human-readable and machine-readable output. | - |
+| 10 | Homebrew and release | Pending | Add Homebrew packaging, release automation, and installation verification. | - |
+| 11 | npm and pnpm packaging | Pending | Add npm and pnpm wrappers with platform binary resolution and installation verification. | - |
+| 12 | Documentation and hardening | Pending | Complete operator and contributor documentation, compatibility checks, privacy review, and release hardening. | - |
+
+## Next work unit: phase 4
+
+- [ ] Decode Docker stats responses into collector-owned observations.
+- [ ] Calculate CPU core deltas, handling the first sample, counter resets, missing counters, and zero system deltas.
+- [ ] Capture memory usage, cache, and working set with explicit semantics.
+- [ ] Normalize lifecycle events for `start`, `stop`, `die`, `destroy`, `oom`, and `rename`.
+- [ ] Introduce collector interfaces at the first concrete consumer and adapter seams.
+- [ ] Persist metric samples and lifecycle observations through the existing batch `Store` behavior.
+- [ ] Add focused unit tests and an optional Docker integration test.
+
+Out of scope for phase 4: background daemon lifecycle, activity-classifier heuristics, aggregate analysis, and recommendations.
+
+## MVP acceptance
+
+| # | Acceptance criterion | Status | Evidence or gap |
+| --- | --- | --- | --- |
+| 1 | Install `csizer` through Homebrew. | Pending | Homebrew packaging is phase 10. |
+| 2 | Install `csizer` through `pnpm add -g`. | Pending | npm and pnpm packaging is phase 11. |
+| 3 | Discover Docker containers with `csizer docker list`. | Complete | Docker discovery and the identity resolver are committed. |
+| 4 | Resolve a Compose service with `csizer track backend`. | Pending | Tracking commands and orchestration do not exist. |
+| 5 | Keep collecting after the foreground CLI exits. | Pending | The background daemon is phase 5. |
+| 6 | Preserve workload identity when Compose recreates a container. | Pending | Identity rules exist, but recreation tracking is not wired end to end. |
+| 7 | Show tracked workloads with `csizer list`. | Pending | Tracking and query workflows are phase 9. |
+| 8 | Show historical statistics with `csizer inspect`. | Pending | Aggregation and query workflows are phases 6 and 9. |
+| 9 | Return a valid ECS Fargate recommendation. | Pending | Recommendation and ECS adaptation are phases 7-8. |
+| 10 | Include evidence, confidence, and warnings in recommendations. | Pending | Recommendation and confidence are phase 7. |
+| 11 | Persist observations locally in SQLite. | Partial | The SQLite schema, repositories, and atomic batch Store are complete; collection does not yet persist observations end to end. |
+| 12 | Preserve the local-first privacy boundary. | Complete | Current Docker discovery reads minimal identity/status metadata, sends no telemetry, and documents excluded application data. |
+| 13 | Support JSON for important query commands. | Pending | Versioned structured query output is phase 9. |
+| 14 | Enforce tests and cross-platform checks in CI. | Complete | CI runs formatting, vet, lint, race tests, and Linux/macOS builds. |
+| 15 | Create release binaries, a Homebrew formula, and npm packages from a release. | Pending | Release and packaging automation are phases 10-11. |
+
+## Maintenance
+
+- Update progress only after verified behavior is committed.
+- Include commit evidence for every completed phase.
+- Keep [architecture.md](architecture.md) focused on durable technical decisions.
+- Keep the [README](../README.md) to a concise status summary and roadmap link.
+- Use future GitHub issues and milestones for executable tasks, and link them back to this roadmap.
+- Use `CHANGELOG.md` for released changes only, not planned work or in-progress status.
+- Do not add speculative dates or completion percentages.

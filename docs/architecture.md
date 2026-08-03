@@ -1,14 +1,14 @@
 # ContainerSize architecture
 
-ContainerSize will passively observe container workloads and produce evidence-backed resource recommendations. This bootstrap establishes only the CLI, version metadata, platform path policy, tests, and project tooling. It does not yet monitor containers.
+ContainerSize will passively observe container workloads and produce evidence-backed resource recommendations. The current implementation provides the CLI foundation, Docker container discovery, pure workload identity resolution, version metadata, platform path policy, tests, and project tooling. It does not yet monitor or persist container activity.
 
 ## Boundaries
 
-The executable entry point stays thin: `cmd/csizer` assembles dependencies and delegates CLI behavior to `internal/cli`. Platform path policy belongs to `internal/config`; build metadata belongs to `internal/version`. Future domain and application packages will own analysis rules and workflows, while infrastructure packages will contain Docker, SQLite, and provider details.
+The executable entry point stays thin: `cmd/csizer` assembles dependencies and delegates CLI behavior to `internal/cli`. `internal/dockerclient` owns Docker construction and maps Moby SDK responses into minimal internal metadata; Moby types do not cross that adapter boundary. `internal/identity` is a pure resolver with no Docker or I/O dependency. Platform path policy belongs to `internal/config`; build metadata belongs to `internal/version`. Future domain and application packages will own analysis rules and workflows, while infrastructure packages will contain SQLite and provider details.
 
 The provisional module path is `github.com/jorgeccarhuasaroni/containersize`. Before publication, changing the `module` directive and replacing that prefix in Go imports is sufficient. Keep the path confined to module declarations and imports so the rename remains mechanical.
 
-No Docker SDK, SQLite driver, daemon, provider adapter, packaging wrapper, migration, or speculative empty interface is part of this phase. Interfaces are introduced only when their first implementation needs them.
+The Docker SDK is used only for read-only container listing. No SQLite driver, daemon, provider adapter, packaging wrapper, migration, statistics collection, event stream, or speculative empty interface is part of this phase. The CLI owns the small listing and closing interface it consumes so tests can replace the adapter without importing SDK types.
 
 ## Planned ports
 
@@ -35,7 +35,7 @@ Machine-readable output will use a versioned, stable schema. Recommendations wil
 
 ## Privacy boundary
 
-Raw metrics and container metadata remain local by default. Collection is limited to resource metrics, minimal technical identifiers, and lifecycle events. ContainerSize never collects environment values, container logs, request content or payloads, or secrets; it inspects only identity labels and resource or lifecycle metadata required for analysis. It sends no remote telemetry by default, and any future provider request must be explicit and inspectable.
+The current `docker list` command reads only minimal container identity labels and status metadata and sends no remote telemetry. Future collection is planned to keep resource metrics, minimal technical identifiers, and lifecycle events local by default. That collector must not read environment values, container logs, request content or payloads, or secrets, and any future provider request must be explicit and inspectable.
 
 ## Key risks
 
@@ -51,7 +51,7 @@ Raw metrics and container metadata remain local by default. Collection is limite
 Each work unit should remain independently testable and reviewable, with tests and documentation included alongside every behavior it introduces:
 
 1. Bootstrap the architecture, CLI shell, path policy, project documentation, and CI.
-2. Implement Docker discovery and stable container and workload identity.
+2. Implement Docker discovery and stable container and workload identity. **Current.**
 3. Add SQLite schema, migrations, WAL configuration, retention, and the single batch writer.
 4. Collect resource samples and lifecycle events through the first `ContainerSource` and `SampleWriter` implementations.
 5. Add the daemon with restart recovery, lifecycle coordination, and periodic reconciliation.

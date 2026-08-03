@@ -6,14 +6,38 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/jorgeccarhuasaroni/containersize/internal/dockerclient"
 	"github.com/jorgeccarhuasaroni/containersize/internal/version"
 )
 
 const description = `ContainerSize observes container workloads and recommends resource settings.
 Recommendations are evidence-based estimates, not load-test guarantees.`
 
+type rootOptions struct {
+	newDockerClient DockerClientFactory
+}
+
+// Option configures an external dependency used by a csizer command.
+type Option func(*rootOptions)
+
+// WithDockerClientFactory replaces lazy Docker client construction.
+func WithDockerClientFactory(factory DockerClientFactory) Option {
+	return func(options *rootOptions) {
+		options.newDockerClient = factory
+	}
+}
+
 // NewRoot constructs the csizer command with caller-controlled output streams.
-func NewRoot(info version.BuildInfo, stdout, stderr io.Writer) *cobra.Command {
+func NewRoot(info version.BuildInfo, stdout, stderr io.Writer, opts ...Option) *cobra.Command {
+	options := rootOptions{
+		newDockerClient: func() (DockerClient, error) {
+			return dockerclient.New("ContainerSize/" + info.Version)
+		},
+	}
+	for _, option := range opts {
+		option(&options)
+	}
+
 	root := &cobra.Command{
 		Use:           "csizer",
 		Short:         "Evidence-based container resource recommendations",
@@ -39,6 +63,7 @@ func NewRoot(info version.BuildInfo, stdout, stderr io.Writer) *cobra.Command {
 			return err
 		},
 	})
+	root.AddCommand(newDockerCommand(options.newDockerClient))
 
 	return root
 }

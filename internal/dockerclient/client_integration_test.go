@@ -15,7 +15,7 @@ func TestListIntegration(t *testing.T) {
 
 	docker, err := New("ContainerSize/integration-test")
 	if err != nil {
-		t.Skipf("Docker client unavailable: %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 	t.Cleanup(func() {
 		if err := docker.Close(); err != nil {
@@ -23,9 +23,15 @@ func TestListIntegration(t *testing.T) {
 		}
 	})
 
-	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
-	defer cancel()
-	if _, err := docker.List(ctx); err != nil {
+	pingContext, cancelPing := context.WithTimeout(t.Context(), 5*time.Second)
+	if err := docker.Ping(pingContext); err != nil {
+		cancelPing()
 		t.Skipf("Docker daemon unavailable: %v", err)
+	}
+	cancelPing()
+	listContext, cancelList := context.WithTimeout(t.Context(), 5*time.Second)
+	defer cancelList()
+	if _, err := docker.List(listContext); err != nil {
+		t.Fatalf("List() after successful Ping() error = %v", err)
 	}
 }

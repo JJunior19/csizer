@@ -16,6 +16,7 @@ import (
 // DockerClient is the discovery capability consumed by the CLI.
 type DockerClient interface {
 	List(context.Context) ([]dockerclient.Container, error)
+	Ping(context.Context) error
 	Close() error
 }
 

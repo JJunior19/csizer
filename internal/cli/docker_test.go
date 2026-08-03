@@ -15,9 +15,15 @@ import (
 type fakeDockerClient struct {
 	containers []dockerclient.Container
 	listErr    error
+	pingErr    error
 	closeErr   error
 	closed     bool
 	context    context.Context
+}
+
+func (fake *fakeDockerClient) Ping(ctx context.Context) error {
+	fake.context = ctx
+	return fake.pingErr
 }
 
 func (fake *fakeDockerClient) List(ctx context.Context) ([]dockerclient.Container, error) {

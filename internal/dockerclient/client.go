@@ -64,6 +64,12 @@ func (docker *Client) List(ctx context.Context) ([]Container, error) {
 	return containers, nil
 }
 
+// Ping verifies that the Docker daemon is accessible.
+func (docker *Client) Ping(ctx context.Context) error {
+	_, err := docker.apiClient.Ping(ctx, client.PingOptions{})
+	return err
+}
+
 // Close releases idle connections held by the Docker client.
 func (docker *Client) Close() error {
 	return docker.apiClient.Close()

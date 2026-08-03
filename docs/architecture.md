@@ -1,14 +1,14 @@
 # ContainerSize architecture
 
-ContainerSize will passively observe container workloads and produce evidence-backed resource recommendations. The current implementation provides the CLI foundation, Docker container discovery, pure workload identity resolution, version metadata, platform path policy, tests, and project tooling. It does not yet monitor or persist container activity.
+ContainerSize will passively observe container workloads and produce evidence-backed resource recommendations. The current phase provides the CLI foundation, Docker container discovery, pure workload identity resolution, embedded SQLite migrations, concrete storage repositories, version metadata, platform path policy, tests, and project tooling. It does not yet collect container metrics or lifecycle events.
 
 ## Boundaries
 
-The executable entry point stays thin: `cmd/csizer` assembles dependencies and delegates CLI behavior to `internal/cli`. `internal/dockerclient` owns Docker construction and maps Moby SDK responses into minimal internal metadata; Moby types do not cross that adapter boundary. `internal/identity` is a pure resolver with no Docker or I/O dependency. Platform path policy belongs to `internal/config`; build metadata belongs to `internal/version`. Future domain and application packages will own analysis rules and workflows, while infrastructure packages will contain SQLite and provider details.
+The executable entry point stays thin: `cmd/csizer` assembles dependencies and delegates CLI behavior to `internal/cli`. `internal/dockerclient` owns Docker construction and maps Moby SDK responses into minimal internal metadata; Moby types do not cross that adapter boundary. `internal/identity` is a pure resolver with no Docker or I/O dependency. `internal/storage` owns SQLite opening, migrations, and concrete persistence behavior. Platform path policy belongs to `internal/config`; build metadata belongs to `internal/version`. Future domain and application packages will own collection and analysis workflows.
 
 The provisional module path is `github.com/jorgeccarhuasaroni/containersize`. Before publication, changing the `module` directive and replacing that prefix in Go imports is sufficient. Keep the path confined to module declarations and imports so the rename remains mechanical.
 
-The Docker SDK is used only for read-only container listing. No SQLite driver, daemon, provider adapter, packaging wrapper, migration, statistics collection, event stream, or speculative empty interface is part of this phase. The CLI owns the small listing and closing interface it consumes so tests can replace the adapter without importing SDK types.
+The Docker SDK is used only for read-only container listing and daemon access checks. The pure-Go SQLite driver is confined to `internal/storage`. No collector, Docker event stream, daemon, retention job, provider adapter, recommendation logic, or packaging wrapper is part of this phase. Interfaces remain at CLI consumer seams so tests can replace Docker and storage lifecycle dependencies without importing SDK or database types.
 
 ## Planned ports
 
@@ -29,7 +29,13 @@ The following names describe intended architectural seams, not interfaces that e
 
 The daemon will combine lifecycle events with periodic reconciliation. Events provide low-latency updates; reconciliation repairs missed events, daemon restarts, and runtime drift. Observation remains passive: ContainerSize measures workloads that actually occur and does not generate traffic.
 
-SQLite will run in WAL mode behind one batch-writing goroutine. Readers use separate read transactions, while the writer serializes bounded batches to avoid lock contention and unbounded memory growth. Schema migrations and retention policy arrive with the first storage implementation.
+SQLite runs in WAL mode with `synchronous=NORMAL`, foreign keys enabled, and a 5000 ms busy timeout. These pragmas are repeated in the escaped file URI DSN so every pooled `database/sql` connection receives them. Existing database paths must be regular files and may not be symbolic links. Their parent directory must not be writable by group or others; existing parent permissions are never changed. Newly created parent directories and database files use `0700` and `0600` permissions respectively.
+
+The top-level `migrations` package embeds numbered SQL files. `schema_migrations` records each version, filename, exact-byte SHA-256 checksum, and application timestamp. Every open validates applied names and checksums. Pending migrations acquire a dedicated connection and `BEGIN IMMEDIATE`, re-read migration state under that writer lock, and apply the SQL and version record in the same transaction.
+
+The initial schema contains `workloads`, `container_instances`, `tracking_sessions`, `metric_samples`, `container_events`, `minute_rollups`, and `workload_settings`. Samples reference sessions rather than duplicating `workload_id`; sessions may optionally reference a container instance. Workload settings default to 2-second active sampling, 10-second idle sampling, 30-day raw retention, a 20-second startup window, no provider, and the `balanced` profile. These are persisted settings only: no retention or rollup job runs in phase 3.
+
+Metric sample batches store CPU cores, optional host CPU percent, memory usage/cache/working-set/limit, optional PID/network/block-I/O counters, and a caller-supplied activity state. A batch uses one database transaction and one prepared insert statement. Validation happens before writes, nullable metrics remain SQL `NULL`, timestamps are UTC RFC3339Nano text, and any row or database error rolls back the full batch. `database/sql` makes the store safe for concurrent callers; collector-phase serialization is intentionally not implemented yet.
 
 Machine-readable output will use a versioned, stable schema. Recommendations will carry evidence windows, sample counts, confidence, assumptions, and warnings so consumers do not confuse estimates with measured load-test capacity.
 
@@ -51,8 +57,8 @@ The current `docker list` command reads only minimal container identity labels a
 Each work unit should remain independently testable and reviewable, with tests and documentation included alongside every behavior it introduces:
 
 1. Bootstrap the architecture, CLI shell, path policy, project documentation, and CI.
-2. Implement Docker discovery and stable container and workload identity. **Current.**
-3. Add SQLite schema, migrations, WAL configuration, retention, and the single batch writer.
+2. Implement Docker discovery and stable container and workload identity.
+3. Add embedded SQLite schema and migrations, connection pragmas, concrete repositories, atomic sample batches, and `csizer init`. **Current.**
 4. Collect resource samples and lifecycle events through the first `ContainerSource` and `SampleWriter` implementations.
 5. Add the daemon with restart recovery, lifecycle coordination, and periodic reconciliation.
 6. Build workload aggregates and representative-window analysis from persisted samples.

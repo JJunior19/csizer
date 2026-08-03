@@ -1,12 +1,15 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"io"
 
 	"github.com/spf13/cobra"
 
+	"github.com/jorgeccarhuasaroni/containersize/internal/config"
 	"github.com/jorgeccarhuasaroni/containersize/internal/dockerclient"
+	"github.com/jorgeccarhuasaroni/containersize/internal/storage"
 	"github.com/jorgeccarhuasaroni/containersize/internal/version"
 )
 
@@ -15,7 +18,21 @@ Recommendations are evidence-based estimates, not load-test guarantees.`
 
 type rootOptions struct {
 	newDockerClient DockerClientFactory
+	resolvePaths    PathResolver
+	openStorage     StorageOpener
 }
+
+// PathResolver resolves persistent paths when a command needs them.
+type PathResolver func() (config.Paths, error)
+
+// Storage is the lifecycle capability consumed by the init command.
+type Storage interface {
+	Path() string
+	Close() error
+}
+
+// StorageOpener creates or migrates local storage when init runs.
+type StorageOpener func(context.Context, string) (Storage, error)
 
 // Option configures an external dependency used by a csizer command.
 type Option func(*rootOptions)
@@ -27,11 +44,29 @@ func WithDockerClientFactory(factory DockerClientFactory) Option {
 	}
 }
 
+// WithPathResolver replaces persistent path resolution.
+func WithPathResolver(resolver PathResolver) Option {
+	return func(options *rootOptions) {
+		options.resolvePaths = resolver
+	}
+}
+
+// WithStorageOpener replaces storage construction and migration.
+func WithStorageOpener(opener StorageOpener) Option {
+	return func(options *rootOptions) {
+		options.openStorage = opener
+	}
+}
+
 // NewRoot constructs the csizer command with caller-controlled output streams.
 func NewRoot(info version.BuildInfo, stdout, stderr io.Writer, opts ...Option) *cobra.Command {
 	options := rootOptions{
 		newDockerClient: func() (DockerClient, error) {
 			return dockerclient.New("ContainerSize/" + info.Version)
+		},
+		resolvePaths: config.ResolvePaths,
+		openStorage: func(ctx context.Context, path string) (Storage, error) {
+			return storage.Open(ctx, path)
 		},
 	}
 	for _, option := range opts {
@@ -63,6 +98,7 @@ func NewRoot(info version.BuildInfo, stdout, stderr io.Writer, opts ...Option) *
 			return err
 		},
 	})
+	root.AddCommand(newInitCommand(options.resolvePaths, options.openStorage, options.newDockerClient))
 	root.AddCommand(newDockerCommand(options.newDockerClient))
 
 	return root

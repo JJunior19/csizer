@@ -12,6 +12,9 @@ var (
 	// ErrContainerInstanceNotInWorkload means a requested container instance
 	// does not exist under the tracking session's workload.
 	ErrContainerInstanceNotInWorkload = errors.New("container instance does not belong to workload")
+	// ErrContainerEventInstanceNotInWorkload means an event was associated with
+	// a container instance outside its workload.
+	ErrContainerEventInstanceNotInWorkload = errors.New("container event instance does not belong to workload")
 	// ErrContainerTimestampRangeConflict means an incremental update would make
 	// the effective stored stop timestamp precede the start timestamp.
 	ErrContainerTimestampRangeConflict = errors.New("container timestamp range conflicts with stored values")
@@ -88,4 +91,15 @@ type MetricSample struct {
 	BlockReadBytes        *int64
 	BlockWriteBytes       *int64
 	ActivityState         string
+}
+
+// ContainerEvent is one normalized lifecycle observation for a container.
+type ContainerEvent struct {
+	ID                  int64
+	WorkloadID          int64
+	ContainerInstanceID *int64
+	Timestamp           time.Time
+	EventType           string
+	ExitCode            *int64
+	MetadataJSON        *string
 }

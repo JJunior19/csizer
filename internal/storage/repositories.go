@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -423,6 +424,72 @@ INSERT INTO metric_samples (
 	return nil
 }
 
+// WriteContainerEvents writes a validated lifecycle-event batch atomically.
+func (store *Store) WriteContainerEvents(ctx context.Context, events []ContainerEvent) (err error) {
+	if len(events) == 0 {
+		return nil
+	}
+	for index, event := range events {
+		if err := validateContainerEvent(event); err != nil {
+			return fmt.Errorf("write container events: event %d: %w", index, err)
+		}
+	}
+
+	transaction, err := store.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("write container events: begin transaction: %w", err)
+	}
+	defer func() {
+		if err != nil {
+			_ = transaction.Rollback()
+		}
+	}()
+
+	statement, err := transaction.PrepareContext(ctx, `
+INSERT INTO container_events (
+    workload_id, container_instance_id, timestamp, event_type, exit_code, metadata_json
+) SELECT ?, ?, ?, ?, ?, ?
+WHERE ? IS NULL OR EXISTS (
+    SELECT 1 FROM container_instances WHERE id = ? AND workload_id = ?
+)`)
+	if err != nil {
+		return fmt.Errorf("write container events: prepare insert: %w", err)
+	}
+	defer func() { _ = statement.Close() }()
+
+	for index, event := range events {
+		result, execErr := statement.ExecContext(
+			ctx,
+			event.WorkloadID,
+			event.ContainerInstanceID,
+			formatTimestamp(event.Timestamp),
+			strings.TrimSpace(event.EventType),
+			event.ExitCode,
+			event.MetadataJSON,
+			event.ContainerInstanceID,
+			event.ContainerInstanceID,
+			event.WorkloadID,
+		)
+		if execErr != nil {
+			return fmt.Errorf("write container events: insert event %d: %w", index, execErr)
+		}
+		affected, rowsErr := result.RowsAffected()
+		if rowsErr != nil {
+			return fmt.Errorf("write container events: rows affected for event %d: %w", index, rowsErr)
+		}
+		if affected == 0 {
+			return fmt.Errorf("write container events: event %d: %w", index, ErrContainerEventInstanceNotInWorkload)
+		}
+	}
+	if err = statement.Close(); err != nil {
+		return fmt.Errorf("write container events: close statement: %w", err)
+	}
+	if err = transaction.Commit(); err != nil {
+		return fmt.Errorf("write container events: commit: %w", err)
+	}
+	return nil
+}
+
 // MetricSamplesForSession returns samples in observation order.
 func (store *Store) MetricSamplesForSession(ctx context.Context, sessionID int64) ([]MetricSample, error) {
 	rows, err := store.db.QueryContext(ctx, `
@@ -569,6 +636,25 @@ func validateMetricSample(sample MetricSample) error {
 		if metric.value != nil && *metric.value < 0 {
 			return fmt.Errorf("%s must be nonnegative", metric.name)
 		}
+	}
+	return nil
+}
+
+func validateContainerEvent(event ContainerEvent) error {
+	if event.WorkloadID <= 0 {
+		return errors.New("workload ID is required")
+	}
+	if event.ContainerInstanceID != nil && *event.ContainerInstanceID <= 0 {
+		return errors.New("container instance ID must be positive")
+	}
+	if err := validateRequiredTimestamp("timestamp", event.Timestamp); err != nil {
+		return err
+	}
+	if strings.TrimSpace(event.EventType) == "" {
+		return errors.New("event type is required")
+	}
+	if event.MetadataJSON != nil && !json.Valid([]byte(*event.MetadataJSON)) {
+		return errors.New("metadata JSON must be valid")
 	}
 	return nil
 }

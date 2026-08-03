@@ -1,6 +1,6 @@
 # ContainerSize roadmap
 
-**Current state:** Phases 1-3 are complete. Phase 4 is next. Last updated: 2026-08-04.
+**Current state:** Phases 1-4 are complete. Phase 5 is next. Last updated: 2026-08-04.
 
 This document is the single source of truth for mutable project progress.
 
@@ -21,8 +21,8 @@ This document is the single source of truth for mutable project progress.
 | 1 | Architecture and CI | Complete | Modular CLI foundation, platform path policy, project documentation, tests, linting, CI, and cross-platform builds. | `1e143c5`, `b0ff68a`, `5b55bf3` |
 | 2 | Docker discovery and identity | Complete | Read-only Docker discovery, stable workload identity, and `csizer docker list`. | `7901d84`, `999c0c0`, `3e74cb6` |
 | 3 | SQLite, migrations, and init | Complete | Embedded checksummed migrations, secure SQLite Store and repositories, atomic metric batches, Docker health check, and `csizer init`. | `6e7ddb4`, `237088a`, `0f6bdd1`, `ee67484` |
-| 4 | Collector and events | Next | Decode Docker stats, normalize lifecycle events, and persist observations through the existing batch Store. | - |
-| 5 | Daemon | Pending | Add background lifecycle, restart recovery, coordination, and periodic reconciliation. | - |
+| 4 | Collector and events | Complete | Decode Docker stats, normalize lifecycle events, and persist observations through the existing batch Store. | `27bcfc6` |
+| 5 | Daemon | Next | Add background lifecycle, restart recovery, coordination, and periodic reconciliation. | - |
 | 6 | Aggregates and analysis | Pending | Build workload aggregates and representative-window analysis from persisted samples. | - |
 | 7 | Recommendation and confidence | Pending | Produce CPU and memory recommendations with evidence, confidence, assumptions, and warnings. | - |
 | 8 | ECS Fargate adapter | Pending | Translate normalized recommendations into valid ECS Fargate CPU and memory settings. | - |
@@ -31,17 +31,15 @@ This document is the single source of truth for mutable project progress.
 | 11 | npm and pnpm packaging | Pending | Add npm and pnpm wrappers with platform binary resolution and installation verification. | - |
 | 12 | Documentation and hardening | Pending | Complete operator and contributor documentation, compatibility checks, privacy review, and release hardening. | - |
 
-## Next work unit: phase 4
+## Next work unit: phase 5
 
-- [ ] Decode Docker stats responses into collector-owned observations.
-- [ ] Calculate CPU core deltas, handling the first sample, counter resets, missing counters, and zero system deltas.
-- [ ] Capture memory usage, cache, and working set with explicit semantics.
-- [ ] Normalize lifecycle events for `start`, `stop`, `die`, `destroy`, `oom`, and `rename`.
-- [ ] Introduce collector interfaces at the first concrete consumer and adapter seams.
-- [ ] Persist metric samples and lifecycle observations through the existing batch `Store` behavior.
-- [ ] Add focused unit tests and an optional Docker integration test.
+- [ ] Start collection independently of the foreground CLI lifecycle.
+- [ ] Recover collection after daemon restarts and Docker connection failures.
+- [ ] Coordinate daemon ownership to prevent duplicate collectors.
+- [ ] Reconcile tracked containers periodically to repair missed lifecycle events and runtime drift.
+- [ ] Add focused lifecycle and recovery tests.
 
-Out of scope for phase 4: background daemon lifecycle, activity-classifier heuristics, aggregate analysis, and recommendations.
+Out of scope for phase 5: activity-classifier heuristics, aggregate analysis, recommendations, and provider adaptation.
 
 ## MVP acceptance
 
@@ -57,7 +55,7 @@ Out of scope for phase 4: background daemon lifecycle, activity-classifier heuri
 | 8 | Show historical statistics with `csizer inspect`. | Pending | Aggregation and query workflows are phases 6 and 9. |
 | 9 | Return a valid ECS Fargate recommendation. | Pending | Recommendation and ECS adaptation are phases 7-8. |
 | 10 | Include evidence, confidence, and warnings in recommendations. | Pending | Recommendation and confidence are phase 7. |
-| 11 | Persist observations locally in SQLite. | Partial | The SQLite schema, repositories, and atomic batch Store are complete; collection does not yet persist observations end to end. |
+| 11 | Persist observations locally in SQLite. | Partial | The collector persists metric and lifecycle observation batches; the daemon tracking workflow is phase 5. |
 | 12 | Preserve the local-first privacy boundary. | Complete | Current Docker discovery reads minimal identity/status metadata, sends no telemetry, and documents excluded application data. |
 | 13 | Support JSON for important query commands. | Pending | Versioned structured query output is phase 9. |
 | 14 | Enforce tests and cross-platform checks in CI. | Complete | CI runs formatting, vet, lint, race tests, and Linux/macOS builds. |

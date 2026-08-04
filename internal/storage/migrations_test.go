@@ -135,14 +135,19 @@ func TestAppliedMigrationChecksumDriftFails(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read embedded migration error = %v", err)
 	}
+	daemonLease, err := fs.ReadFile(embeddedmigrations.Files, "002_daemon_leases.sql")
+	if err != nil {
+		t.Fatalf("read embedded daemon lease migration error = %v", err)
+	}
 	drifted := append(append([]byte(nil), original...), '\n')
 	err = applyMigrations(t.Context(), store.db, fstest.MapFS{
-		"001_initial.sql": {Data: drifted},
+		"001_initial.sql":       {Data: drifted},
+		"002_daemon_leases.sql": {Data: daemonLease},
 	})
 	if err == nil || !strings.Contains(err.Error(), "checksum drift") {
 		t.Fatalf("applyMigrations(drifted) error = %v, want checksum drift", err)
 	}
-	assertMigrationCount(t, store.db, 1)
+	assertMigrationCount(t, store.db, 2)
 }
 
 func TestImmediateTransactionRollbackFailureDiscardsConnection(t *testing.T) {

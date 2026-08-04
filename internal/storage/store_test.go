@@ -63,6 +63,7 @@ func TestOpenCreatesExactSchemaAndConfiguresEveryConnection(t *testing.T) {
 	wantTables := []string{
 		"container_events",
 		"container_instances",
+		"daemon_leases",
 		"metric_samples",
 		"minute_rollups",
 		"schema_migrations",
@@ -120,6 +121,7 @@ func TestOpenCreatesExactSchemaAndConfiguresEveryConnection(t *testing.T) {
 			"raw_retention_days", "startup_window_seconds", "default_provider", "default_profile",
 		},
 		"schema_migrations": {"version", "name", "checksum", "applied_at"},
+		"daemon_leases":     {"name", "owner_id", "expires_at"},
 	}
 	for table, want := range exactColumns {
 		if got := tableColumns(t, store.db, table); !reflect.DeepEqual(got, want) {
@@ -159,7 +161,7 @@ func TestOpenCreatesExactSchemaAndConfiguresEveryConnection(t *testing.T) {
 	var name, checksum string
 	if err := store.db.QueryRowContext(
 		t.Context(),
-		`SELECT version, name, checksum FROM schema_migrations`,
+		`SELECT version, name, checksum FROM schema_migrations WHERE version = 1`,
 	).Scan(&version, &name, &checksum); err != nil {
 		t.Fatalf("query migration error = %v", err)
 	}
@@ -475,7 +477,7 @@ func TestConcurrentOpenAppliesMigrationOnce(t *testing.T) {
 	if len(stores) != callers {
 		t.Fatalf("successful opens = %d, want %d", len(stores), callers)
 	}
-	assertMigrationCount(t, stores[0].db, 1)
+	assertMigrationCount(t, stores[0].db, 2)
 }
 
 func TestOpenIsIdempotentAndEnforcesForeignKeys(t *testing.T) {
@@ -491,7 +493,7 @@ func TestOpenIsIdempotentAndEnforcesForeignKeys(t *testing.T) {
 		t.Fatalf("second Open() error = %v", err)
 	}
 	t.Cleanup(func() { _ = store.Close() })
-	assertMigrationCount(t, store.db, 1)
+	assertMigrationCount(t, store.db, 2)
 
 	_, err = store.db.ExecContext(t.Context(), `
 INSERT INTO container_instances (

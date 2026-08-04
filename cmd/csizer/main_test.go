@@ -2,8 +2,11 @@ package main
 
 import (
 	"bytes"
+	"os"
 	"strings"
+	"syscall"
 	"testing"
+	"time"
 )
 
 func TestRun(t *testing.T) {
@@ -53,5 +56,19 @@ func TestRun(t *testing.T) {
 				t.Errorf("stderr = %q, must not contain %q", stderr.String(), test.forbidStderr)
 			}
 		})
+	}
+}
+
+func TestCommandContextHandlesSIGTERM(t *testing.T) {
+	ctx, stop := commandContext(t.Context())
+	defer stop()
+
+	if err := syscall.Kill(os.Getpid(), syscall.SIGTERM); err != nil {
+		t.Fatalf("Kill(SIGTERM) error = %v", err)
+	}
+	select {
+	case <-ctx.Done():
+	case <-time.After(time.Second):
+		t.Fatal("command context did not cancel after SIGTERM")
 	}
 }

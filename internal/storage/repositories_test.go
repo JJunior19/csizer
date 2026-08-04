@@ -690,6 +690,60 @@ func TestMetricSampleValidation(t *testing.T) {
 	}
 }
 
+func TestDaemonLeaseCoordinatesOwnersAndExpires(t *testing.T) {
+	t.Parallel()
+
+	store := openTestStore(t, filepath.Join(t.TempDir(), "daemon-lease.db"))
+	now := time.Date(2026, time.August, 4, 12, 0, 0, 0, time.UTC)
+	acquired, err := store.AcquireDaemonLease(t.Context(), "first", now, now.Add(time.Minute))
+	if err != nil || !acquired {
+		t.Fatalf("AcquireDaemonLease(first) = %v, %v; want true, nil", acquired, err)
+	}
+	acquired, err = store.AcquireDaemonLease(t.Context(), "second", now.Add(time.Second), now.Add(2*time.Minute))
+	if err != nil || acquired {
+		t.Fatalf("AcquireDaemonLease(second) = %v, %v; want false, nil", acquired, err)
+	}
+	acquired, err = store.AcquireDaemonLease(t.Context(), "second", now.Add(time.Minute), now.Add(2*time.Minute))
+	if err != nil || !acquired {
+		t.Fatalf("AcquireDaemonLease(expired second) = %v, %v; want true, nil", acquired, err)
+	}
+	if err := store.ReleaseDaemonLease(t.Context(), "first"); err != nil {
+		t.Fatalf("ReleaseDaemonLease(first) error = %v", err)
+	}
+	acquired, err = store.AcquireDaemonLease(t.Context(), "third", now.Add(time.Minute), now.Add(3*time.Minute))
+	if err != nil || acquired {
+		t.Fatalf("AcquireDaemonLease(third) = %v, %v; want false, nil", acquired, err)
+	}
+}
+
+func TestActiveTrackingSessionsIncludesDisabledWorkloadsAndExcludesEndedSessions(t *testing.T) {
+	t.Parallel()
+
+	store := openTestStore(t, filepath.Join(t.TempDir(), "active-sessions.db"))
+	workload, instance, session := createSampleParents(t, store)
+	if _, err := store.db.ExecContext(t.Context(), `UPDATE workloads SET tracking_enabled = 0 WHERE id = ?`, workload.ID); err != nil {
+		t.Fatalf("disable workload error = %v", err)
+	}
+	sessions, err := store.ActiveTrackingSessions(t.Context())
+	if err != nil {
+		t.Fatalf("ActiveTrackingSessions() error = %v", err)
+	}
+	if len(sessions) != 1 || sessions[0].ID != session.ID || sessions[0].ContainerID != instance.ContainerID || sessions[0].TrackingEnabled {
+		t.Fatalf("ActiveTrackingSessions() = %#v, want session %d for %q", sessions, session.ID, instance.ContainerID)
+	}
+	stopped, err := store.EndTrackingSession(t.Context(), session.ID, time.Now(), "stopped")
+	if err != nil || !stopped {
+		t.Fatalf("EndTrackingSession() = %v, %v; want true, nil", stopped, err)
+	}
+	sessions, err = store.ActiveTrackingSessions(t.Context())
+	if err != nil {
+		t.Fatalf("ActiveTrackingSessions() after stop error = %v", err)
+	}
+	if len(sessions) != 0 {
+		t.Errorf("ActiveTrackingSessions() after stop = %#v, want none", sessions)
+	}
+}
+
 func createSampleParents(t *testing.T, store *Store) (Workload, ContainerInstance, TrackingSession) {
 	t.Helper()
 	workload, err := store.EnsureWorkload(t.Context(), Workload{WorkloadKey: "compose:test/api"})

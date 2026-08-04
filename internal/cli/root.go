@@ -20,6 +20,7 @@ type rootOptions struct {
 	newDockerClient DockerClientFactory
 	resolvePaths    PathResolver
 	openStorage     StorageOpener
+	runDaemon       DaemonRunner
 }
 
 // PathResolver resolves persistent paths when a command needs them.
@@ -58,6 +59,13 @@ func WithStorageOpener(opener StorageOpener) Option {
 	}
 }
 
+// WithDaemonRunner replaces the long-running collection process.
+func WithDaemonRunner(runner DaemonRunner) Option {
+	return func(options *rootOptions) {
+		options.runDaemon = runner
+	}
+}
+
 // NewRoot constructs the csizer command with caller-controlled output streams.
 func NewRoot(info version.BuildInfo, stdout, stderr io.Writer, opts ...Option) *cobra.Command {
 	options := rootOptions{
@@ -67,6 +75,9 @@ func NewRoot(info version.BuildInfo, stdout, stderr io.Writer, opts ...Option) *
 		resolvePaths: config.ResolvePaths,
 		openStorage: func(ctx context.Context, path string) (Storage, error) {
 			return storage.Open(ctx, path)
+		},
+		runDaemon: func(ctx context.Context, databasePath string) error {
+			return startCollectionDaemon(ctx, databasePath, info.Version)
 		},
 	}
 	for _, option := range opts {
@@ -100,6 +111,7 @@ func NewRoot(info version.BuildInfo, stdout, stderr io.Writer, opts ...Option) *
 	})
 	root.AddCommand(newInitCommand(options.resolvePaths, options.openStorage, options.newDockerClient))
 	root.AddCommand(newDockerCommand(options.newDockerClient))
+	root.AddCommand(newDaemonCommand(options.resolvePaths, options.runDaemon))
 
 	return root
 }

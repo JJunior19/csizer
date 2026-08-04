@@ -74,6 +74,13 @@ type TrackingSession struct {
 	CollectorVersion    string
 }
 
+// ActiveTrackingSession is a running session joined with its current tracking state.
+type ActiveTrackingSession struct {
+	TrackingSession
+	ContainerID     string
+	TrackingEnabled bool
+}
+
 // MetricSample is one resource observation in a tracking session.
 type MetricSample struct {
 	ID                    int64

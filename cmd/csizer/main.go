@@ -1,9 +1,12 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/jorgeccarhuasaroni/containersize/internal/cli"
 	"github.com/jorgeccarhuasaroni/containersize/internal/version"
@@ -15,6 +18,9 @@ func main() {
 
 func run(args []string, stdout, stderr io.Writer) int {
 	command := cli.NewRoot(version.Current(), stdout, stderr)
+	ctx, stop := commandContext(context.Background())
+	defer stop()
+	command.SetContext(ctx)
 	command.SetArgs(args)
 
 	if err := command.Execute(); err != nil {
@@ -23,4 +29,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 	}
 
 	return 0
+}
+
+func commandContext(parent context.Context) (context.Context, context.CancelFunc) {
+	return signal.NotifyContext(parent, os.Interrupt, syscall.SIGTERM)
 }

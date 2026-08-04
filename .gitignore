@@ -1,4 +1,7 @@
 .DS_Store
+.atl/
+.codegraph/
+.cursor/
 bin/
 dist/
 coverage.out

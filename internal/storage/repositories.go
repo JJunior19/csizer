@@ -361,6 +361,144 @@ func (store *Store) CreateTrackingSession(ctx context.Context, session TrackingS
 	return session, nil
 }
 
+// ActiveTrackingSessions returns all running sessions, including disabled workloads
+// so the daemon can close their current observation windows.
+func (store *Store) ActiveTrackingSessions(ctx context.Context) ([]ActiveTrackingSession, error) {
+	rows, err := store.db.QueryContext(ctx, `
+SELECT ts.id, ts.workload_id, ts.container_instance_id, ts.started_at,
+       ts.status, ts.label, ts.collector_version, ci.container_id, w.tracking_enabled
+FROM tracking_sessions AS ts
+JOIN workloads AS w ON w.id = ts.workload_id
+JOIN container_instances AS ci ON ci.id = ts.container_instance_id
+WHERE ts.status = 'running' AND ts.ended_at IS NULL
+ORDER BY ts.id`)
+	if err != nil {
+		return nil, fmt.Errorf("list active tracking sessions: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	sessions := make([]ActiveTrackingSession, 0)
+	for rows.Next() {
+		var (
+			session          ActiveTrackingSession
+			instanceID       sql.NullInt64
+			startedAt        string
+			label, collector sql.NullString
+		)
+		if err := rows.Scan(
+			&session.ID,
+			&session.WorkloadID,
+			&instanceID,
+			&startedAt,
+			&session.Status,
+			&label,
+			&collector,
+			&session.ContainerID,
+			&session.TrackingEnabled,
+		); err != nil {
+			return nil, fmt.Errorf("scan active tracking session: %w", err)
+		}
+		if !instanceID.Valid {
+			return nil, fmt.Errorf("scan active tracking session %d: container instance ID is NULL", session.ID)
+		}
+		instance := instanceID.Int64
+		session.ContainerInstanceID = &instance
+		var parseErr error
+		session.StartedAt, parseErr = parseTimestamp(startedAt)
+		if parseErr != nil {
+			return nil, fmt.Errorf("scan active tracking session %d: started_at: %w", session.ID, parseErr)
+		}
+		session.Label = label.String
+		session.CollectorVersion = collector.String
+		sessions = append(sessions, session)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate active tracking sessions: %w", err)
+	}
+	return sessions, nil
+}
+
+// EndTrackingSession closes a running session. It reports whether this call
+// transitioned the session, so reconciliation can safely repeat after a crash.
+func (store *Store) EndTrackingSession(ctx context.Context, sessionID int64, endedAt time.Time, status string) (bool, error) {
+	if sessionID <= 0 {
+		return false, errors.New("end tracking session: session ID is required")
+	}
+	if err := validateRequiredTimestamp("ended_at", endedAt); err != nil {
+		return false, fmt.Errorf("end tracking session: %w", err)
+	}
+	status = strings.TrimSpace(status)
+	if status == "" {
+		return false, errors.New("end tracking session: status is required")
+	}
+	result, err := store.db.ExecContext(
+		ctx,
+		`UPDATE tracking_sessions
+		 SET ended_at = ?, status = ?
+		 WHERE id = ? AND status = 'running' AND ended_at IS NULL`,
+		formatTimestamp(endedAt),
+		status,
+		sessionID,
+	)
+	if err != nil {
+		return false, fmt.Errorf("end tracking session: update: %w", err)
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return false, fmt.Errorf("end tracking session: rows affected: %w", err)
+	}
+	return affected > 0, nil
+}
+
+// AcquireDaemonLease acquires or renews the single local collection lease.
+func (store *Store) AcquireDaemonLease(ctx context.Context, ownerID string, now, expiresAt time.Time) (bool, error) {
+	ownerID = strings.TrimSpace(ownerID)
+	if ownerID == "" {
+		return false, errors.New("acquire daemon lease: owner ID is required")
+	}
+	if err := validateRequiredTimestamp("now", now); err != nil {
+		return false, fmt.Errorf("acquire daemon lease: %w", err)
+	}
+	if err := validateRequiredTimestamp("expires_at", expiresAt); err != nil {
+		return false, fmt.Errorf("acquire daemon lease: %w", err)
+	}
+	if !expiresAt.After(now) {
+		return false, errors.New("acquire daemon lease: expiry must be after now")
+	}
+	result, err := store.db.ExecContext(ctx, `
+INSERT INTO daemon_leases(name, owner_id, expires_at)
+VALUES ('collector', ?, ?)
+ON CONFLICT(name) DO UPDATE SET
+    owner_id = excluded.owner_id,
+    expires_at = excluded.expires_at
+WHERE daemon_leases.owner_id = excluded.owner_id
+   OR daemon_leases.expires_at <= ?`, ownerID, formatLeaseTimestamp(expiresAt), formatLeaseTimestamp(now))
+	if err != nil {
+		return false, fmt.Errorf("acquire daemon lease: upsert: %w", err)
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return false, fmt.Errorf("acquire daemon lease: rows affected: %w", err)
+	}
+	return affected > 0, nil
+}
+
+// ReleaseDaemonLease relinquishes the lease only when it belongs to ownerID.
+func (store *Store) ReleaseDaemonLease(ctx context.Context, ownerID string) error {
+	ownerID = strings.TrimSpace(ownerID)
+	if ownerID == "" {
+		return errors.New("release daemon lease: owner ID is required")
+	}
+	if _, err := store.db.ExecContext(
+		ctx,
+		`DELETE FROM daemon_leases WHERE name = 'collector' AND owner_id = ?`,
+		ownerID,
+	); err != nil {
+		return fmt.Errorf("release daemon lease: delete: %w", err)
+	}
+	return nil
+}
+
 // WriteMetricSamples writes a validated batch atomically with one prepared statement.
 func (store *Store) WriteMetricSamples(ctx context.Context, samples []MetricSample) (err error) {
 	if len(samples) == 0 {
@@ -692,6 +830,10 @@ func validateRepresentableTimestamp(name string, value time.Time) error {
 
 func formatTimestamp(value time.Time) string {
 	return value.UTC().Format(time.RFC3339Nano)
+}
+
+func formatLeaseTimestamp(value time.Time) string {
+	return value.UTC().Format("2006-01-02T15:04:05.000000000Z07:00")
 }
 
 func nullableTimestamp(value *time.Time) any {

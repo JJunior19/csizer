@@ -568,6 +568,59 @@ func TestMetricSampleBatchBehavior(t *testing.T) {
 	assertSampleCount(t, store, 2)
 }
 
+func TestMetricSamplesForWorkloadRespectsBoundaries(t *testing.T) {
+	t.Parallel()
+
+	store := openTestStore(t, filepath.Join(t.TempDir(), "workload samples", "database.db"))
+	workload, _, session := createSampleParents(t, store)
+	other, _, otherSession := createSampleParentsForWorkload(t, store, "compose:other/api", "other-container")
+	base := time.Date(2026, time.September, 4, 12, 0, 0, 0, time.UTC)
+	if err := store.WriteMetricSamples(t.Context(), []MetricSample{
+		{SessionID: session.ID, Timestamp: base, CPUUsageCores: 1, MemoryUsageBytes: 100, MemoryWorkingSetBytes: 80, ActivityState: "unknown"},
+		{SessionID: session.ID, Timestamp: base.Add(time.Second), CPUUsageCores: 2, MemoryUsageBytes: 200, MemoryWorkingSetBytes: 160, ActivityState: "unknown"},
+		{SessionID: session.ID, Timestamp: base.Add(2 * time.Second), CPUUsageCores: 3, MemoryUsageBytes: 300, MemoryWorkingSetBytes: 240, ActivityState: "unknown"},
+		{SessionID: otherSession.ID, Timestamp: base.Add(time.Second), CPUUsageCores: 4, MemoryUsageBytes: 400, MemoryWorkingSetBytes: 320, ActivityState: "unknown"},
+	}); err != nil {
+		t.Fatalf("WriteMetricSamples() error = %v", err)
+	}
+
+	samples, err := store.MetricSamplesForWorkload(t.Context(), workload.ID, base.Add(time.Second), base.Add(2*time.Second))
+	if err != nil {
+		t.Fatalf("MetricSamplesForWorkload() error = %v", err)
+	}
+	if len(samples) != 2 || samples[0].Timestamp != base.Add(time.Second) || samples[1].Timestamp != base.Add(2*time.Second) {
+		t.Fatalf("MetricSamplesForWorkload() = %#v", samples)
+	}
+	if samples[0].SessionID == otherSession.ID || other.ID == workload.ID {
+		t.Errorf("returned samples are not scoped to workload %d: %#v", workload.ID, samples)
+	}
+	if _, err := store.MetricSamplesForWorkload(t.Context(), workload.ID, base.Add(time.Second), base); err == nil || !strings.Contains(err.Error(), "to cannot precede from") {
+		t.Errorf("reverse boundaries error = %v", err)
+	}
+}
+
+func TestMetricSamplesForWorkloadHandlesMixedFractionalTimestampPrecision(t *testing.T) {
+	t.Parallel()
+
+	store := openTestStore(t, filepath.Join(t.TempDir(), "fractional samples", "database.db"))
+	workload, _, session := createSampleParents(t, store)
+	base := time.Date(2026, time.September, 4, 12, 0, 0, 0, time.UTC)
+	if err := store.WriteMetricSamples(t.Context(), []MetricSample{
+		{SessionID: session.ID, Timestamp: base.Add(500 * time.Millisecond), CPUUsageCores: 1, MemoryUsageBytes: 100, MemoryWorkingSetBytes: 80, ActivityState: "unknown"},
+		{SessionID: session.ID, Timestamp: base, CPUUsageCores: 2, MemoryUsageBytes: 200, MemoryWorkingSetBytes: 160, ActivityState: "unknown"},
+	}); err != nil {
+		t.Fatalf("WriteMetricSamples() error = %v", err)
+	}
+
+	samples, err := store.MetricSamplesForWorkload(t.Context(), workload.ID, base, base)
+	if err != nil {
+		t.Fatalf("MetricSamplesForWorkload() error = %v", err)
+	}
+	if len(samples) != 1 || !samples[0].Timestamp.Equal(base) {
+		t.Fatalf("MetricSamplesForWorkload() = %#v, want only the zero-fraction boundary", samples)
+	}
+}
+
 func TestMetricSampleBatchRollsBackOnValidationAndDatabaseErrors(t *testing.T) {
 	t.Parallel()
 
@@ -746,13 +799,18 @@ func TestActiveTrackingSessionsIncludesDisabledWorkloadsAndExcludesEndedSessions
 
 func createSampleParents(t *testing.T, store *Store) (Workload, ContainerInstance, TrackingSession) {
 	t.Helper()
-	workload, err := store.EnsureWorkload(t.Context(), Workload{WorkloadKey: "compose:test/api"})
+	return createSampleParentsForWorkload(t, store, "compose:test/api", "container-id")
+}
+
+func createSampleParentsForWorkload(t *testing.T, store *Store, workloadKey, containerID string) (Workload, ContainerInstance, TrackingSession) {
+	t.Helper()
+	workload, err := store.EnsureWorkload(t.Context(), Workload{WorkloadKey: workloadKey})
 	if err != nil {
 		t.Fatalf("EnsureWorkload() error = %v", err)
 	}
 	instance, err := store.RegisterContainerInstance(t.Context(), ContainerInstance{
 		WorkloadID:    workload.ID,
-		ContainerID:   "container-id",
+		ContainerID:   containerID,
 		ContainerName: "test-api-1",
 		ImageName:     "example/api:test",
 	})

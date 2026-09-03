@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"sort"
 	"strings"
 	"time"
 )
@@ -637,7 +638,7 @@ SELECT id, session_id, timestamp, cpu_usage_cores, cpu_percent_host,
        block_read_bytes, block_write_bytes, activity_state
 FROM metric_samples
 WHERE session_id = ?
-ORDER BY timestamp, id`, sessionID)
+ORDER BY id`, sessionID)
 	if err != nil {
 		return nil, fmt.Errorf("list metric samples: %w", err)
 	}
@@ -645,50 +646,118 @@ ORDER BY timestamp, id`, sessionID)
 
 	samples := make([]MetricSample, 0)
 	for rows.Next() {
-		var (
-			sample                                      MetricSample
-			timestamp                                   string
-			cpuPercentHost                              sql.NullFloat64
-			memoryCache, memoryLimit, pids              sql.NullInt64
-			networkRx, networkTx, blockRead, blockWrite sql.NullInt64
-		)
-		if err := rows.Scan(
-			&sample.ID,
-			&sample.SessionID,
-			&timestamp,
-			&sample.CPUUsageCores,
-			&cpuPercentHost,
-			&sample.MemoryUsageBytes,
-			&memoryCache,
-			&sample.MemoryWorkingSetBytes,
-			&memoryLimit,
-			&pids,
-			&networkRx,
-			&networkTx,
-			&blockRead,
-			&blockWrite,
-			&sample.ActivityState,
-		); err != nil {
-			return nil, fmt.Errorf("scan metric sample: %w", err)
-		}
-		sample.Timestamp, err = parseTimestamp(timestamp)
+		sample, err := scanMetricSample(rows)
 		if err != nil {
-			return nil, fmt.Errorf("scan metric sample timestamp: %w", err)
+			return nil, err
 		}
-		sample.CPUPercentHost = float64Pointer(cpuPercentHost)
-		sample.MemoryCacheBytes = int64Pointer(memoryCache)
-		sample.MemoryLimitBytes = int64Pointer(memoryLimit)
-		sample.PIDs = int64Pointer(pids)
-		sample.NetworkRxBytes = int64Pointer(networkRx)
-		sample.NetworkTxBytes = int64Pointer(networkTx)
-		sample.BlockReadBytes = int64Pointer(blockRead)
-		sample.BlockWriteBytes = int64Pointer(blockWrite)
 		samples = append(samples, sample)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iterate metric samples: %w", err)
 	}
+	sortMetricSamples(samples)
 	return samples, nil
+}
+
+// MetricSamplesForWorkload returns persisted samples inside inclusive boundaries.
+func (store *Store) MetricSamplesForWorkload(ctx context.Context, workloadID int64, from, to time.Time) ([]MetricSample, error) {
+	if workloadID <= 0 {
+		return nil, errors.New("list workload metric samples: workload ID is required")
+	}
+	if err := validateRequiredTimestamp("from", from); err != nil {
+		return nil, fmt.Errorf("list workload metric samples: %w", err)
+	}
+	if err := validateRequiredTimestamp("to", to); err != nil {
+		return nil, fmt.Errorf("list workload metric samples: %w", err)
+	}
+	if to.Before(from) {
+		return nil, errors.New("list workload metric samples: to cannot precede from")
+	}
+	rows, err := store.db.QueryContext(ctx, `
+SELECT ms.id, ms.session_id, ms.timestamp, ms.cpu_usage_cores, ms.cpu_percent_host,
+       ms.memory_usage_bytes, ms.memory_cache_bytes, ms.memory_working_set_bytes,
+       ms.memory_limit_bytes, ms.pids, ms.network_rx_bytes, ms.network_tx_bytes,
+       ms.block_read_bytes, ms.block_write_bytes, ms.activity_state
+FROM metric_samples AS ms
+JOIN tracking_sessions AS ts ON ts.id = ms.session_id
+WHERE ts.workload_id = ?
+ORDER BY ms.id`, workloadID)
+	if err != nil {
+		return nil, fmt.Errorf("list workload metric samples: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	samples := make([]MetricSample, 0)
+	for rows.Next() {
+		sample, err := scanMetricSample(rows)
+		if err != nil {
+			return nil, err
+		}
+		if !sample.Timestamp.Before(from) && !sample.Timestamp.After(to) {
+			samples = append(samples, sample)
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate workload metric samples: %w", err)
+	}
+	sortMetricSamples(samples)
+	return samples, nil
+}
+
+func sortMetricSamples(samples []MetricSample) {
+	sort.SliceStable(samples, func(left, right int) bool {
+		if samples[left].Timestamp.Equal(samples[right].Timestamp) {
+			return samples[left].ID < samples[right].ID
+		}
+		return samples[left].Timestamp.Before(samples[right].Timestamp)
+	})
+}
+
+type metricSampleScanner interface {
+	Scan(...any) error
+}
+
+func scanMetricSample(scanner metricSampleScanner) (MetricSample, error) {
+	var (
+		sample                                      MetricSample
+		timestamp                                   string
+		cpuPercentHost                              sql.NullFloat64
+		memoryCache, memoryLimit, pids              sql.NullInt64
+		networkRx, networkTx, blockRead, blockWrite sql.NullInt64
+	)
+	if err := scanner.Scan(
+		&sample.ID,
+		&sample.SessionID,
+		&timestamp,
+		&sample.CPUUsageCores,
+		&cpuPercentHost,
+		&sample.MemoryUsageBytes,
+		&memoryCache,
+		&sample.MemoryWorkingSetBytes,
+		&memoryLimit,
+		&pids,
+		&networkRx,
+		&networkTx,
+		&blockRead,
+		&blockWrite,
+		&sample.ActivityState,
+	); err != nil {
+		return MetricSample{}, fmt.Errorf("scan metric sample: %w", err)
+	}
+	parsed, err := parseTimestamp(timestamp)
+	if err != nil {
+		return MetricSample{}, fmt.Errorf("scan metric sample timestamp: %w", err)
+	}
+	sample.Timestamp = parsed
+	sample.CPUPercentHost = float64Pointer(cpuPercentHost)
+	sample.MemoryCacheBytes = int64Pointer(memoryCache)
+	sample.MemoryLimitBytes = int64Pointer(memoryLimit)
+	sample.PIDs = int64Pointer(pids)
+	sample.NetworkRxBytes = int64Pointer(networkRx)
+	sample.NetworkTxBytes = int64Pointer(networkTx)
+	sample.BlockReadBytes = int64Pointer(blockRead)
+	sample.BlockWriteBytes = int64Pointer(blockWrite)
+	return sample, nil
 }
 
 type queryRower interface {

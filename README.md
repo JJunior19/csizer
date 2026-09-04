@@ -2,7 +2,7 @@
 
 ContainerSize is a local-first tool for discovering container workloads and, in later phases, recommending CPU and memory settings from collected evidence.
 
-**Status:** Local SQLite initialization and Docker discovery are available through `csizer init` and `csizer docker list`. Tracking, metric collection, retention jobs, statistics, and recommendations are not implemented yet.
+**Status:** Local Docker tracking, background collection, workload analysis, and ECS Fargate recommendations are available. Packaging and release automation remain planned.
 
 ## Objective
 
@@ -19,6 +19,12 @@ make build
 ./bin/csizer --version
 ./bin/csizer init
 ./bin/csizer docker list
+./bin/csizer track backend
+# Run this in a second terminal while the workload is active.
+./bin/csizer daemon
+./bin/csizer list
+./bin/csizer inspect backend
+./bin/csizer recommend backend --provider ecs-fargate
 ```
 
 `csizer init` creates or migrates the local SQLite database, prints the absolute path reported by the initialized store, and then checks Docker access:
@@ -52,7 +58,9 @@ csizer inspect backend
 csizer recommend backend --provider ecs-fargate
 ```
 
-`csizer track`, `csizer list`, `csizer inspect`, and `csizer recommend` are future roadmap examples and do not exist yet. Homebrew and npm installation are also not available in this phase.
+`csizer track WORKLOAD` resolves a Docker workload by its Compose service, workload key, display name, or container name and stores it locally. It does not start collection itself; run `csizer daemon` separately while the tracked workload is running. `csizer list`, `csizer inspect WORKLOAD`, and `csizer recommend WORKLOAD --provider ecs-fargate` expose persisted tracking, analysis, and the smallest compatible ECS Fargate task size. Add `--json` to these commands for a versioned machine-readable response.
+
+The recommendation remains an evidence-based estimate, not a load-test capacity guarantee. It is based on collected samples and includes confidence, assumptions, and warnings. Homebrew and npm installation are not available yet.
 
 ## Architecture
 
@@ -66,7 +74,7 @@ ContainerSize is local-first. The current `docker list` command reads only the m
 
 ## Roadmap
 
-Phases 1-3 are complete, and phase 4 (collector and events) is next. See the [canonical roadmap](docs/roadmap.md) for current progress, acceptance status, and the next work unit.
+Phases 1-7 are complete, and phase 8 (ECS Fargate adapter) is the current work unit. See the [canonical roadmap](docs/roadmap.md) for current progress, acceptance status, and the next work unit.
 
 ## Contributing
 

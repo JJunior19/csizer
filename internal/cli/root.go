@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -20,6 +21,7 @@ type rootOptions struct {
 	newDockerClient DockerClientFactory
 	resolvePaths    PathResolver
 	openStorage     StorageOpener
+	openWorkloads   WorkloadStorageOpener
 	runDaemon       DaemonRunner
 }
 
@@ -34,6 +36,19 @@ type Storage interface {
 
 // StorageOpener creates or migrates local storage when init runs.
 type StorageOpener func(context.Context, string) (Storage, error)
+
+// WorkloadStore provides tracking and query operations for CLI workflows.
+type WorkloadStore interface {
+	Storage
+	EnsureWorkload(context.Context, storage.Workload) (storage.Workload, error)
+	ListWorkloads(context.Context) ([]storage.Workload, error)
+	SetTrackingEnabled(context.Context, int64, bool) (storage.Workload, error)
+	MetricSampleBoundsForWorkload(context.Context, int64) (time.Time, time.Time, error)
+	MetricSamplesForWorkload(context.Context, int64, time.Time, time.Time) ([]storage.MetricSample, error)
+}
+
+// WorkloadStorageOpener opens the local database for tracking and query commands.
+type WorkloadStorageOpener func(context.Context, string) (WorkloadStore, error)
 
 // Option configures an external dependency used by a csizer command.
 type Option func(*rootOptions)
@@ -59,6 +74,13 @@ func WithStorageOpener(opener StorageOpener) Option {
 	}
 }
 
+// WithWorkloadStorageOpener replaces local tracking and query storage construction.
+func WithWorkloadStorageOpener(opener WorkloadStorageOpener) Option {
+	return func(options *rootOptions) {
+		options.openWorkloads = opener
+	}
+}
+
 // WithDaemonRunner replaces the long-running collection process.
 func WithDaemonRunner(runner DaemonRunner) Option {
 	return func(options *rootOptions) {
@@ -74,6 +96,9 @@ func NewRoot(info version.BuildInfo, stdout, stderr io.Writer, opts ...Option) *
 		},
 		resolvePaths: config.ResolvePaths,
 		openStorage: func(ctx context.Context, path string) (Storage, error) {
+			return storage.Open(ctx, path)
+		},
+		openWorkloads: func(ctx context.Context, path string) (WorkloadStore, error) {
 			return storage.Open(ctx, path)
 		},
 		runDaemon: func(ctx context.Context, databasePath string) error {
@@ -112,6 +137,7 @@ func NewRoot(info version.BuildInfo, stdout, stderr io.Writer, opts ...Option) *
 	root.AddCommand(newInitCommand(options.resolvePaths, options.openStorage, options.newDockerClient))
 	root.AddCommand(newDockerCommand(options.newDockerClient))
 	root.AddCommand(newDaemonCommand(options.resolvePaths, options.runDaemon))
+	root.AddCommand(newWorkloadCommands(options.resolvePaths, options.openWorkloads, options.newDockerClient)...)
 
 	return root
 }

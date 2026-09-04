@@ -20,36 +20,36 @@ const (
 
 // Recommendation is a provider-neutral CPU and memory estimate.
 type Recommendation struct {
-	WorkloadID  int64
-	CPUCores    float64
-	MemoryBytes int64
-	Evidence    Evidence
-	Confidence  Confidence
-	Assumptions []string
-	Warnings    []string
+	WorkloadID  int64      `json:"workload_id"`
+	CPUCores    float64    `json:"cpu_cores"`
+	MemoryBytes int64      `json:"memory_bytes"`
+	Evidence    Evidence   `json:"evidence"`
+	Confidence  Confidence `json:"confidence"`
+	Assumptions []string   `json:"assumptions"`
+	Warnings    []string   `json:"warnings"`
 }
 
 // Evidence identifies the exact observations behind a recommendation.
 type Evidence struct {
-	RequestedFrom    time.Time
-	RequestedTo      time.Time
-	ObservedFrom     time.Time
-	ObservedTo       time.Time
-	Representative   analysis.RepresentativeWindow
-	InputSampleIDs   []int64
-	SampleCount      int
-	CPU              analysis.FloatSummary
-	MemoryWorkingSet analysis.ByteSummary
+	RequestedFrom    time.Time                     `json:"requested_from"`
+	RequestedTo      time.Time                     `json:"requested_to"`
+	ObservedFrom     time.Time                     `json:"observed_from"`
+	ObservedTo       time.Time                     `json:"observed_to"`
+	Representative   analysis.RepresentativeWindow `json:"representative_window"`
+	InputSampleIDs   []int64                       `json:"input_sample_ids"`
+	SampleCount      int                           `json:"sample_count"`
+	CPU              analysis.FloatSummary         `json:"cpu"`
+	MemoryWorkingSet analysis.ByteSummary          `json:"memory_working_set"`
 }
 
 // Confidence explains the evidence quality score for a recommendation.
 type Confidence struct {
-	Score       float64
-	Level       string
-	Coverage    float64
-	Recency     float64
-	Variability float64
-	DataQuality float64
+	Score       float64 `json:"score"`
+	Level       string  `json:"level"`
+	Coverage    float64 `json:"coverage"`
+	Recency     float64 `json:"recency"`
+	Variability float64 `json:"variability"`
+	DataQuality float64 `json:"data_quality"`
 }
 
 // Derive produces a recommendation from one completed analysis result.

@@ -23,51 +23,51 @@ type SampleSource interface {
 
 // Request fixes the persisted sample range and continuity rule for one analysis.
 type Request struct {
-	WorkloadID int64
-	From       time.Time
-	To         time.Time
-	MaximumGap time.Duration
+	WorkloadID int64         `json:"workload_id"`
+	From       time.Time     `json:"from"`
+	To         time.Time     `json:"to"`
+	MaximumGap time.Duration `json:"maximum_gap"`
 }
 
 // Result preserves the requested and observed boundaries with the derived data.
 type Result struct {
-	Request              Request
-	Aggregate            Aggregate
-	RepresentativeWindow RepresentativeWindow
+	Request              Request              `json:"request"`
+	Aggregate            Aggregate            `json:"aggregate"`
+	RepresentativeWindow RepresentativeWindow `json:"representative_window"`
 }
 
 // FloatSummary describes a CPU distribution observed in one analysis window.
 type FloatSummary struct {
-	Average float64
-	P95     float64
-	P99     float64
-	Max     float64
+	Average float64 `json:"average"`
+	P95     float64 `json:"p95"`
+	P99     float64 `json:"p99"`
+	Max     float64 `json:"max"`
 }
 
 // ByteSummary describes a memory distribution observed in one analysis window.
 type ByteSummary struct {
-	Average float64
-	P95     int64
-	P99     int64
-	Max     int64
+	Average float64 `json:"average"`
+	P95     int64   `json:"p95"`
+	P99     int64   `json:"p99"`
+	Max     int64   `json:"max"`
 }
 
 // Aggregate retains the exact input set and time boundaries for a workload summary.
 type Aggregate struct {
-	WorkloadID     int64
-	InputSampleIDs []int64
-	ObservedFrom   time.Time
-	ObservedTo     time.Time
-	CPU            FloatSummary
-	MemoryUsage    ByteSummary
-	MemoryWorking  ByteSummary
+	WorkloadID     int64        `json:"workload_id"`
+	InputSampleIDs []int64      `json:"input_sample_ids"`
+	ObservedFrom   time.Time    `json:"observed_from"`
+	ObservedTo     time.Time    `json:"observed_to"`
+	CPU            FloatSummary `json:"cpu"`
+	MemoryUsage    ByteSummary  `json:"memory_usage"`
+	MemoryWorking  ByteSummary  `json:"memory_working_set"`
 }
 
 // RepresentativeWindow is the most densely observed contiguous sample range.
 type RepresentativeWindow struct {
-	SampleIDs []int64
-	StartedAt time.Time
-	EndedAt   time.Time
+	SampleIDs []int64   `json:"sample_ids"`
+	StartedAt time.Time `json:"started_at"`
+	EndedAt   time.Time `json:"ended_at"`
 }
 
 // SampleCount returns the number of persisted samples in the selected window.

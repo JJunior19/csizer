@@ -74,7 +74,7 @@ ContainerSize is local-first. The current `docker list` command reads only the m
 
 ## Roadmap
 
-Phases 1-7 are complete, and phase 8 (ECS Fargate adapter) is the current work unit. See the [canonical roadmap](docs/roadmap.md) for current progress, acceptance status, and the next work unit.
+Phases 1-9 are complete, and phase 10 (Homebrew and release) is the current work unit. See the [canonical roadmap](docs/roadmap.md) for current progress, acceptance status, and the next work unit.
 
 ## Contributing
 

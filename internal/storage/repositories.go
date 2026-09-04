@@ -97,6 +97,60 @@ func (store *Store) WorkloadByKey(ctx context.Context, workloadKey string) (Work
 	return workload, nil
 }
 
+// ListWorkloads returns all persisted workloads in stable display order.
+func (store *Store) ListWorkloads(ctx context.Context) ([]Workload, error) {
+	rows, err := store.db.QueryContext(ctx, `
+SELECT id, workload_key, display_name, compose_project, compose_service,
+       image_repository, tracking_enabled, created_at, updated_at
+FROM workloads
+ORDER BY display_name, workload_key`)
+	if err != nil {
+		return nil, fmt.Errorf("list workloads: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	workloads := make([]Workload, 0)
+	for rows.Next() {
+		workload, err := scanWorkload(rows)
+		if err != nil {
+			return nil, err
+		}
+		workloads = append(workloads, workload)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate workloads: %w", err)
+	}
+	return workloads, nil
+}
+
+// SetTrackingEnabled changes one workload's collection state.
+func (store *Store) SetTrackingEnabled(ctx context.Context, workloadID int64, enabled bool) (Workload, error) {
+	if workloadID <= 0 {
+		return Workload{}, errors.New("set workload tracking: workload ID is required")
+	}
+	result, err := store.db.ExecContext(ctx, `
+UPDATE workloads SET tracking_enabled = ?, updated_at = ? WHERE id = ?`, enabled, formatTimestamp(time.Now()), workloadID)
+	if err != nil {
+		return Workload{}, fmt.Errorf("set workload tracking: %w", err)
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return Workload{}, fmt.Errorf("set workload tracking: rows affected: %w", err)
+	}
+	if affected == 0 {
+		return Workload{}, fmt.Errorf("set workload tracking: workload %d: %w", workloadID, sql.ErrNoRows)
+	}
+	var key string
+	if err := store.db.QueryRowContext(ctx, `SELECT workload_key FROM workloads WHERE id = ?`, workloadID).Scan(&key); err != nil {
+		return Workload{}, fmt.Errorf("set workload tracking: read workload key: %w", err)
+	}
+	workload, err := store.WorkloadByKey(ctx, key)
+	if err != nil {
+		return Workload{}, fmt.Errorf("set workload tracking: read workload: %w", err)
+	}
+	return workload, nil
+}
+
 // SettingsForWorkload returns one workload's persisted defaults.
 func (store *Store) SettingsForWorkload(ctx context.Context, workloadID int64) (WorkloadSettings, error) {
 	var (
@@ -704,6 +758,47 @@ ORDER BY ms.id`, workloadID)
 	return samples, nil
 }
 
+// MetricSampleBoundsForWorkload returns the exact observed range for a workload.
+func (store *Store) MetricSampleBoundsForWorkload(ctx context.Context, workloadID int64) (time.Time, time.Time, error) {
+	if workloadID <= 0 {
+		return time.Time{}, time.Time{}, errors.New("get workload metric bounds: workload ID is required")
+	}
+	rows, err := store.db.QueryContext(ctx, `
+SELECT ms.timestamp
+FROM metric_samples AS ms
+JOIN tracking_sessions AS ts ON ts.id = ms.session_id
+WHERE ts.workload_id = ?`, workloadID)
+	if err != nil {
+		return time.Time{}, time.Time{}, fmt.Errorf("get workload metric bounds: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	var from, to time.Time
+	for rows.Next() {
+		var timestamp string
+		if err := rows.Scan(&timestamp); err != nil {
+			return time.Time{}, time.Time{}, fmt.Errorf("scan workload metric timestamp: %w", err)
+		}
+		observed, err := parseTimestamp(timestamp)
+		if err != nil {
+			return time.Time{}, time.Time{}, fmt.Errorf("parse workload metric timestamp: %w", err)
+		}
+		if from.IsZero() || observed.Before(from) {
+			from = observed
+		}
+		if to.IsZero() || observed.After(to) {
+			to = observed
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return time.Time{}, time.Time{}, fmt.Errorf("iterate workload metric bounds: %w", err)
+	}
+	if from.IsZero() {
+		return time.Time{}, time.Time{}, fmt.Errorf("get workload metric bounds: %w", ErrNoMetricSamples)
+	}
+	return from, to, nil
+}
+
 func sortMetricSamples(samples []MetricSample) {
 	sort.SliceStable(samples, func(left, right int) bool {
 		if samples[left].Timestamp.Equal(samples[right].Timestamp) {
@@ -764,20 +859,18 @@ type queryRower interface {
 	QueryRowContext(context.Context, string, ...any) *sql.Row
 }
 
-func queryWorkload(ctx context.Context, queryer queryRower, workloadKey string) (Workload, error) {
+type workloadScanner interface {
+	Scan(...any) error
+}
+
+func scanWorkload(scanner workloadScanner) (Workload, error) {
 	var (
 		workload                       Workload
 		composeProject, composeService sql.NullString
 		imageRepository                sql.NullString
 		createdAt, updatedAt           string
 	)
-	err := queryer.QueryRowContext(
-		ctx,
-		`SELECT id, workload_key, display_name, compose_project, compose_service,
-                image_repository, tracking_enabled, created_at, updated_at
-         FROM workloads WHERE workload_key = ?`,
-		workloadKey,
-	).Scan(
+	if err := scanner.Scan(
 		&workload.ID,
 		&workload.WorkloadKey,
 		&workload.DisplayName,
@@ -787,20 +880,34 @@ func queryWorkload(ctx context.Context, queryer queryRower, workloadKey string) 
 		&workload.TrackingEnabled,
 		&createdAt,
 		&updatedAt,
-	)
-	if err != nil {
-		return Workload{}, err
+	); err != nil {
+		return Workload{}, fmt.Errorf("scan workload: %w", err)
 	}
 	workload.ComposeProject = composeProject.String
 	workload.ComposeService = composeService.String
 	workload.ImageRepository = imageRepository.String
+	var err error
 	workload.CreatedAt, err = parseTimestamp(createdAt)
 	if err != nil {
-		return Workload{}, fmt.Errorf("created_at: %w", err)
+		return Workload{}, fmt.Errorf("scan workload created_at: %w", err)
 	}
 	workload.UpdatedAt, err = parseTimestamp(updatedAt)
 	if err != nil {
-		return Workload{}, fmt.Errorf("updated_at: %w", err)
+		return Workload{}, fmt.Errorf("scan workload updated_at: %w", err)
+	}
+	return workload, nil
+}
+
+func queryWorkload(ctx context.Context, queryer queryRower, workloadKey string) (Workload, error) {
+	workload, err := scanWorkload(queryer.QueryRowContext(
+		ctx,
+		`SELECT id, workload_key, display_name, compose_project, compose_service,
+                 image_repository, tracking_enabled, created_at, updated_at
+		 FROM workloads WHERE workload_key = ?`,
+		workloadKey,
+	))
+	if err != nil {
+		return Workload{}, err
 	}
 	return workload, nil
 }

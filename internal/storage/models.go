@@ -18,19 +18,21 @@ var (
 	// ErrContainerTimestampRangeConflict means an incremental update would make
 	// the effective stored stop timestamp precede the start timestamp.
 	ErrContainerTimestampRangeConflict = errors.New("container timestamp range conflicts with stored values")
+	// ErrNoMetricSamples means a workload has no persisted observations yet.
+	ErrNoMetricSamples = errors.New("workload has no metric samples")
 )
 
 // Workload is a stable logical deployable unit.
 type Workload struct {
-	ID              int64
-	WorkloadKey     string
-	DisplayName     string
-	ComposeProject  string
-	ComposeService  string
-	ImageRepository string
-	TrackingEnabled bool
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
+	ID              int64     `json:"id"`
+	WorkloadKey     string    `json:"workload_key"`
+	DisplayName     string    `json:"display_name"`
+	ComposeProject  string    `json:"compose_project,omitempty"`
+	ComposeService  string    `json:"compose_service,omitempty"`
+	ImageRepository string    `json:"image_repository,omitempty"`
+	TrackingEnabled bool      `json:"tracking_enabled"`
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
 }
 
 // WorkloadSettings contains persisted sampling and recommendation defaults.

@@ -621,6 +621,55 @@ func TestMetricSamplesForWorkloadHandlesMixedFractionalTimestampPrecision(t *tes
 	}
 }
 
+func TestListWorkloadsAndTrackingState(t *testing.T) {
+	t.Parallel()
+
+	store := openTestStore(t, filepath.Join(t.TempDir(), "workload list", "database.db"))
+	first, err := store.EnsureWorkload(t.Context(), Workload{WorkloadKey: "compose:demo/worker", DisplayName: "Worker"})
+	if err != nil {
+		t.Fatalf("EnsureWorkload(first) error = %v", err)
+	}
+	second, err := store.EnsureWorkload(t.Context(), Workload{WorkloadKey: "compose:demo/api", DisplayName: "API"})
+	if err != nil {
+		t.Fatalf("EnsureWorkload(second) error = %v", err)
+	}
+	updated, err := store.SetTrackingEnabled(t.Context(), first.ID, false)
+	if err != nil {
+		t.Fatalf("SetTrackingEnabled() error = %v", err)
+	}
+	if updated.TrackingEnabled {
+		t.Errorf("updated tracking state = enabled, want disabled")
+	}
+	workloads, err := store.ListWorkloads(t.Context())
+	if err != nil {
+		t.Fatalf("ListWorkloads() error = %v", err)
+	}
+	if len(workloads) != 2 || workloads[0].ID != second.ID || workloads[1].ID != first.ID || workloads[0].DisplayName != "API" || workloads[1].TrackingEnabled {
+		t.Errorf("ListWorkloads() = %#v", workloads)
+	}
+}
+
+func TestMetricSampleBoundsForWorkload(t *testing.T) {
+	t.Parallel()
+
+	store := openTestStore(t, filepath.Join(t.TempDir(), "sample bounds", "database.db"))
+	workload, _, session := createSampleParents(t, store)
+	base := time.Date(2026, time.September, 4, 12, 0, 0, 0, time.UTC)
+	if _, _, err := store.MetricSampleBoundsForWorkload(t.Context(), workload.ID); !errors.Is(err, ErrNoMetricSamples) {
+		t.Fatalf("MetricSampleBoundsForWorkload(empty) error = %v, want ErrNoMetricSamples", err)
+	}
+	if err := store.WriteMetricSamples(t.Context(), []MetricSample{
+		{SessionID: session.ID, Timestamp: base.Add(time.Second), CPUUsageCores: 1, MemoryUsageBytes: 100, MemoryWorkingSetBytes: 80, ActivityState: "unknown"},
+		{SessionID: session.ID, Timestamp: base, CPUUsageCores: 2, MemoryUsageBytes: 200, MemoryWorkingSetBytes: 160, ActivityState: "unknown"},
+	}); err != nil {
+		t.Fatalf("WriteMetricSamples() error = %v", err)
+	}
+	from, to, err := store.MetricSampleBoundsForWorkload(t.Context(), workload.ID)
+	if err != nil || !from.Equal(base) || !to.Equal(base.Add(time.Second)) {
+		t.Errorf("MetricSampleBoundsForWorkload() = %v, %v, %v", from, to, err)
+	}
+}
+
 func TestMetricSampleBatchRollsBackOnValidationAndDatabaseErrors(t *testing.T) {
 	t.Parallel()
 

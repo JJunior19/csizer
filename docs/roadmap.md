@@ -1,6 +1,6 @@
 # ContainerSize roadmap
 
-**Current state:** Phases 1-6 are complete. Phase 7 is next. Last updated: 2026-09-04.
+**Current state:** Phases 1-7 are complete. Phase 8 is next. Last updated: 2026-09-04.
 
 This document is the single source of truth for mutable project progress.
 
@@ -24,21 +24,21 @@ This document is the single source of truth for mutable project progress.
 | 4 | Collector and events | Complete | Decode Docker stats, normalize lifecycle events, and persist observations through the existing batch Store. | `27bcfc6` |
 | 5 | Daemon | Complete | Background lifecycle, lease-based ownership, recovery, and periodic reconciliation. | `a94219f` |
 | 6 | Aggregates and analysis | Complete | Build workload aggregates and representative-window analysis from persisted samples. | `bb47dfd` |
-| 7 | Recommendation and confidence | Next | Produce CPU and memory recommendations with evidence, confidence, assumptions, and warnings. | - |
-| 8 | ECS Fargate adapter | Pending | Translate normalized recommendations into valid ECS Fargate CPU and memory settings. | - |
+| 7 | Recommendation and confidence | Complete | Produce CPU and memory recommendations with evidence, confidence, assumptions, and warnings. | `780c294` |
+| 8 | ECS Fargate adapter | Next | Translate normalized recommendations into valid ECS Fargate CPU and memory settings. | - |
 | 9 | CLI tracking, query, and outputs | Pending | Expose tracking and query workflows with stable human-readable and machine-readable output. | - |
 | 10 | Homebrew and release | Pending | Add Homebrew packaging, release automation, and installation verification. | - |
 | 11 | npm and pnpm packaging | Pending | Add npm and pnpm wrappers with platform binary resolution and installation verification. | - |
 | 12 | Documentation and hardening | Pending | Complete operator and contributor documentation, compatibility checks, privacy review, and release hardening. | - |
 
-## Next work unit: phase 7
+## Next work unit: phase 8
 
-- [ ] Derive CPU and memory recommendations from workload aggregates.
-- [ ] Include evidence windows, sample counts, inputs, and assumptions with every recommendation.
-- [ ] Score confidence from coverage, recency, variability, and data quality.
-- [ ] Add focused recommendation and confidence tests.
+- [ ] Translate provider-neutral CPU and memory recommendations into ECS Fargate task settings.
+- [ ] Validate every CPU and memory combination against ECS Fargate constraints.
+- [ ] Preserve recommendation evidence, confidence, assumptions, and warnings through adaptation.
+- [ ] Add focused ECS Fargate adapter and validation tests.
 
-Out of scope for phase 7: provider adaptation and query CLI output.
+Out of scope for phase 8: query CLI output.
 
 ## MVP acceptance
 
@@ -52,8 +52,8 @@ Out of scope for phase 7: provider adaptation and query CLI output.
 | 6 | Preserve workload identity when Compose recreates a container. | Pending | Identity rules exist, but recreation tracking is not wired end to end. |
 | 7 | Show tracked workloads with `csizer list`. | Pending | Tracking and query workflows are phase 9. |
 | 8 | Show historical statistics with `csizer inspect`. | Pending | Aggregation is complete; the query workflow is phase 9. |
-| 9 | Return a valid ECS Fargate recommendation. | Pending | Recommendation and ECS adaptation are phases 7-8. |
-| 10 | Include evidence, confidence, and warnings in recommendations. | Pending | Recommendation and confidence are phase 7. |
+| 9 | Return a valid ECS Fargate recommendation. | Pending | Provider-neutral recommendations are complete; ECS adaptation is phase 8. |
+| 10 | Include evidence, confidence, and warnings in recommendations. | Partial | The provider-neutral model contains them; query output remains phase 9. |
 | 11 | Persist observations locally in SQLite. | Complete | The collector and background daemon persist metric and lifecycle observation batches locally. |
 | 12 | Preserve the local-first privacy boundary. | Complete | Current Docker discovery reads minimal identity/status metadata, sends no telemetry, and documents excluded application data. |
 | 13 | Support JSON for important query commands. | Pending | Versioned structured query output is phase 9. |

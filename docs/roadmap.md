@@ -1,6 +1,6 @@
 # ContainerSize roadmap
 
-**Current state:** Phases 1-9 are complete. Phase 10 is next. Last updated: 2026-09-04.
+**Current state:** Phases 1-9 are complete. Phase 10 is in progress. Last updated: 2026-09-27.
 
 This document is the single source of truth for mutable project progress.
 
@@ -27,16 +27,16 @@ This document is the single source of truth for mutable project progress.
 | 7 | Recommendation and confidence | Complete | Produce CPU and memory recommendations with evidence, confidence, assumptions, and warnings. | `780c294` |
 | 8 | ECS Fargate adapter | Complete | Translate normalized recommendations into valid ECS Fargate CPU and memory settings. | `bf96f82` |
 | 9 | CLI tracking, query, and outputs | Complete | Expose tracking and query workflows with stable human-readable and machine-readable output. | `8e811dd` |
-| 10 | Homebrew and release | Next | Add Homebrew packaging, release automation, and installation verification. | - |
+| 10 | Homebrew and release | Partial | Versioned release binaries, tag-driven release automation, and Homebrew cask publishing and verification are committed. The first published release is pending. | `e280cbd` |
 | 11 | npm and pnpm packaging | Pending | Add npm and pnpm wrappers with platform binary resolution and installation verification. | - |
 | 12 | Documentation and hardening | Pending | Complete operator and contributor documentation, compatibility checks, privacy review, and release hardening. | - |
 
 ## Next work unit: phase 10
 
-- [ ] Build versioned release binaries for supported macOS and Linux targets.
-- [ ] Publish and verify a Homebrew formula that resolves those release binaries.
-- [ ] Automate release publication from versioned tags.
-- [ ] Add installation verification for Homebrew users.
+- [x] Build versioned release binaries for supported macOS and Linux targets.
+- [ ] Publish and verify a Homebrew cask that resolves those release binaries. Blocked until the `JJunior19/homebrew-csizer` repository and the `TAP_GITHUB_TOKEN` secret exist.
+- [x] Automate release publication from versioned tags.
+- [x] Add installation verification for Homebrew users.
 
 Out of scope for phase 10: npm and pnpm packaging.
 
@@ -44,7 +44,7 @@ Out of scope for phase 10: npm and pnpm packaging.
 
 | # | Acceptance criterion | Status | Evidence or gap |
 | --- | --- | --- | --- |
-| 1 | Install `csizer` through Homebrew. | Pending | Homebrew packaging is phase 10. |
+| 1 | Install `csizer` through Homebrew. | Pending | The Homebrew cask pipeline is committed; the first release is not published yet. |
 | 2 | Install `csizer` through `pnpm add -g`. | Pending | npm and pnpm packaging is phase 11. |
 | 3 | Discover Docker containers with `csizer docker list`. | Complete | Docker discovery and the identity resolver are committed. |
 | 4 | Resolve a Compose service with `csizer track backend`. | Complete | The tracking command resolves and persists a discovered Docker workload. |
@@ -58,7 +58,7 @@ Out of scope for phase 10: npm and pnpm packaging.
 | 12 | Preserve the local-first privacy boundary. | Complete | Current Docker discovery reads minimal identity/status metadata, sends no telemetry, and documents excluded application data. |
 | 13 | Support JSON for important query commands. | Complete | Tracking and query commands emit versioned JSON with `--json`. |
 | 14 | Enforce tests and cross-platform checks in CI. | Complete | CI runs formatting, vet, lint, race tests, and Linux/macOS builds. |
-| 15 | Create release binaries, a Homebrew formula, and npm packages from a release. | Pending | Release and packaging automation are phases 10-11. |
+| 15 | Create release binaries, a Homebrew cask, and npm packages from a release. | Pending | Release automation is committed; the first release and npm packaging are phases 10-11. |
 
 ## Maintenance
 

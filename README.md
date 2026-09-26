@@ -2,7 +2,7 @@
 
 ContainerSize is a local-first tool for discovering container workloads and, in later phases, recommending CPU and memory settings from collected evidence.
 
-**Status:** Local Docker tracking, background collection, workload analysis, and ECS Fargate recommendations are available. Packaging and release automation remain planned.
+**Status:** Local Docker tracking, background collection, workload analysis, and ECS Fargate recommendations are available. Release automation is in place; the first Homebrew release is pending publication.
 
 ## Objective
 
@@ -60,7 +60,7 @@ csizer recommend backend --provider ecs-fargate
 
 `csizer track WORKLOAD` resolves a Docker workload by its Compose service, workload key, display name, or container name and stores it locally. It does not start collection itself; run `csizer daemon` separately while the tracked workload is running. `csizer list`, `csizer inspect WORKLOAD`, and `csizer recommend WORKLOAD --provider ecs-fargate` expose persisted tracking, analysis, and the smallest compatible ECS Fargate task size. Add `--json` to these commands for a versioned machine-readable response.
 
-The recommendation remains an evidence-based estimate, not a load-test capacity guarantee. It is based on collected samples and includes confidence, assumptions, and warnings. Homebrew and npm installation are not available yet.
+The recommendation remains an evidence-based estimate, not a load-test capacity guarantee. It is based on collected samples and includes confidence, assumptions, and warnings. Homebrew installation becomes available with the first release; npm installation is not available yet.
 
 ## Architecture
 
@@ -85,3 +85,5 @@ make check
 ```
 
 Tests should exercise behavior, errors, and output streams. Use table-driven tests when behavior has multiple cases. Do not introduce an interface until a concrete implementation needs the seam.
+
+See [docs/release.md](docs/release.md) for the release process and Homebrew packaging.

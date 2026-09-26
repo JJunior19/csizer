@@ -1,0 +1,75 @@
+version: 2
+
+project_name: csizer
+
+builds:
+  - id: csizer
+    main: ./cmd/csizer
+    binary: csizer
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s
+      - -w
+      - -X github.com/jorgeccarhuasaroni/containersize/internal/version.Version={{ .Version }}
+      - -X github.com/jorgeccarhuasaroni/containersize/internal/version.Commit={{ .Commit }}
+      - -X github.com/jorgeccarhuasaroni/containersize/internal/version.Date={{ .CommitDate }}
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - id: csizer
+    ids:
+      - csizer
+    formats:
+      - tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - README.md
+
+checksum:
+  algorithm: sha256
+  name_template: checksums.txt
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^chore:"
+      - "^ci:"
+      - "^test:"
+      - "Merge pull request"
+      - "Merge remote-tracking branch"
+
+release:
+  draft: false
+  prerelease: auto
+  name_template: "{{ .ProjectName }} {{ .Tag }}"
+
+homebrew_casks:
+  - name: csizer
+    repository:
+      owner: JJunior19
+      name: homebrew-csizer
+      branch: main
+      token: "{{ .Env.TAP_GITHUB_TOKEN }}"
+    binaries:
+      - csizer
+    homepage: "https://github.com/JJunior19/csizer"
+    description: "Container workload tracking and ECS Fargate sizing recommendations"
+    commit_author:
+      name: goreleaserbot
+      email: bot@goreleaser.com
+    commit_msg_template: "Brew cask update for {{ .ProjectName }} version {{ .Tag }}"
+    skip_upload: auto

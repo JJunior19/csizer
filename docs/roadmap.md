@@ -1,6 +1,6 @@
 # ContainerSize roadmap
 
-**Current state:** Phases 1-10 are complete. Phase 11 (npm and pnpm packaging) is next. Last updated: 2026-10-03.
+**Current state:** Phases 1-10 are complete. Phase 11 (npm and pnpm packaging) is in progress: automation is committed, the first npm release is pending. Last updated: 2026-10-03.
 
 This document is the single source of truth for mutable project progress.
 
@@ -28,7 +28,7 @@ This document is the single source of truth for mutable project progress.
 | 8 | ECS Fargate adapter | Complete | Translate normalized recommendations into valid ECS Fargate CPU and memory settings. | `bf96f82` |
 | 9 | CLI tracking, query, and outputs | Complete | Expose tracking and query workflows with stable human-readable and machine-readable output. | `8e811dd` |
 | 10 | Homebrew and release | Complete | v0.1.1 published from versioned tags with signed and notarized macOS binaries; the tap serves the cask and `brew install --cask JJunior19/csizer/csizer` is verified end to end on macOS. | `0de13f4` |
-| 11 | npm and pnpm packaging | Pending | Add npm and pnpm wrappers with platform binary resolution and installation verification. | - |
+| 11 | npm and pnpm packaging | Partial | The npm wrapper, platform packages, and release publishing and verification are committed (`ff7b1f6`); the first npm release is pending. | `ff7b1f6` |
 | 12 | Documentation and hardening | Pending | Complete operator and contributor documentation, compatibility checks, privacy review, and release hardening. | - |
 
 ## Phase 10 (complete) — next work unit: phase 11

@@ -9,12 +9,12 @@ ContainerSize is a local-first tool for discovering container workloads and, in 
 Install the published binary with Homebrew (macOS and Linux):
 
 ```sh
-brew tap JJunior19/csizer
-brew trust JJunior19/csizer
-brew install JJunior19/csizer/csizer
+brew install --cask JJunior19/csizer/csizer
 ```
 
-Homebrew refuses to load casks from non-official taps until they are trusted, so the `brew trust` step is required once per machine. Alternatively, build from source with Go 1.26.5 using `make build`.
+The fully qualified name trusts the cask automatically, so no separate
+`brew trust` step is needed. On macOS the released binaries are signed and
+notarized. Alternatively, build from source with Go 1.26.5 using `make build`.
 
 ## Objective
 

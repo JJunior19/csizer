@@ -1,6 +1,6 @@
 # ContainerSize roadmap
 
-**Current state:** Phases 1-9 are complete. Phase 10 is in progress. Last updated: 2026-09-27.
+**Current state:** Phases 1-10 are complete. Phase 11 (npm and pnpm packaging) is next. Last updated: 2026-10-03.
 
 This document is the single source of truth for mutable project progress.
 
@@ -44,7 +44,7 @@ Out of scope for phase 10: npm and pnpm packaging.
 
 | # | Acceptance criterion | Status | Evidence or gap |
 | --- | --- | --- | --- |
-| 1 | Install `csizer` through Homebrew. | Pending | The Homebrew cask pipeline is committed; the first release is not published yet. |
+| 1 | Install `csizer` through Homebrew. | Complete | v0.1.1 serves the cask from `JJunior19/homebrew-csizer`; `brew install --cask JJunior19/csizer/csizer` is verified end to end on macOS. |
 | 2 | Install `csizer` through `pnpm add -g`. | Pending | npm and pnpm packaging is phase 11. |
 | 3 | Discover Docker containers with `csizer docker list`. | Complete | Docker discovery and the identity resolver are committed. |
 | 4 | Resolve a Compose service with `csizer track backend`. | Complete | The tracking command resolves and persists a discovered Docker workload. |
@@ -58,7 +58,7 @@ Out of scope for phase 10: npm and pnpm packaging.
 | 12 | Preserve the local-first privacy boundary. | Complete | Current Docker discovery reads minimal identity/status metadata, sends no telemetry, and documents excluded application data. |
 | 13 | Support JSON for important query commands. | Complete | Tracking and query commands emit versioned JSON with `--json`. |
 | 14 | Enforce tests and cross-platform checks in CI. | Complete | CI runs formatting, vet, lint, race tests, and Linux/macOS builds. |
-| 15 | Create release binaries, a Homebrew cask, and npm packages from a release. | Pending | Release automation is committed; the first release and npm packaging are phases 10-11. |
+| 15 | Create release binaries, a Homebrew cask, and npm packages from a release. | Partial | Tags produce signed and notarized binaries plus the Homebrew cask (v0.1.1); npm packaging is phase 11. |
 
 ## Maintenance
 

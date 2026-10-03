@@ -2,9 +2,9 @@
 .atl/
 .codegraph/
 .cursor/
-bin/
-dist/
-build/
+/bin/
+/dist/
+/build/
 coverage.out
 *.db
 *.db-shm

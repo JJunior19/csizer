@@ -28,6 +28,10 @@ brew untap "${tap}" >/dev/null 2>&1 || true
 echo "Tapping ${tap}"
 brew tap "${tap}"
 
+echo "Trusting ${tap}"
+# Homebrew refuses to load casks from non-official taps until they are trusted.
+brew trust --tap "${tap}"
+
 echo "Installing ${package}"
 brew install "${package}"
 

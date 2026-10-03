@@ -47,8 +47,11 @@ it verifies the published cask end to end.
 ## Installing
 
 ```sh
+brew tap JJunior19/csizer
+brew trust JJunior19/csizer
 brew install JJunior19/csizer/csizer
 ```
 
-The cask links the `csizer` binary into the Homebrew prefix and supports macOS
-and Linux.
+Homebrew refuses to load casks from non-official taps until they are trusted,
+so the `brew trust` step is required once per machine. The cask links the
+`csizer` binary into the Homebrew prefix and supports macOS and Linux.

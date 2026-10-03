@@ -2,7 +2,19 @@
 
 ContainerSize is a local-first tool for discovering container workloads and, in later phases, recommending CPU and memory settings from collected evidence.
 
-**Status:** Local Docker tracking, background collection, workload analysis, and ECS Fargate recommendations are available. Release automation is in place; the first Homebrew release is pending publication.
+**Status:** Local Docker tracking, background collection, workload analysis, and ECS Fargate recommendations are available. The first Homebrew release (v0.1.0) is published.
+
+## Installation
+
+Install the published binary with Homebrew (macOS and Linux):
+
+```sh
+brew tap JJunior19/csizer
+brew trust JJunior19/csizer
+brew install JJunior19/csizer/csizer
+```
+
+Homebrew refuses to load casks from non-official taps until they are trusted, so the `brew trust` step is required once per machine. Alternatively, build from source with Go 1.26.5 using `make build`.
 
 ## Objective
 
@@ -60,7 +72,7 @@ csizer recommend backend --provider ecs-fargate
 
 `csizer track WORKLOAD` resolves a Docker workload by its Compose service, workload key, display name, or container name and stores it locally. It does not start collection itself; run `csizer daemon` separately while the tracked workload is running. `csizer list`, `csizer inspect WORKLOAD`, and `csizer recommend WORKLOAD --provider ecs-fargate` expose persisted tracking, analysis, and the smallest compatible ECS Fargate task size. Add `--json` to these commands for a versioned machine-readable response.
 
-The recommendation remains an evidence-based estimate, not a load-test capacity guarantee. It is based on collected samples and includes confidence, assumptions, and warnings. Homebrew installation becomes available with the first release; npm installation is not available yet.
+The recommendation remains an evidence-based estimate, not a load-test capacity guarantee. It is based on collected samples and includes confidence, assumptions, and warnings. Homebrew installation is available; npm installation is not available yet.
 
 ## Architecture
 

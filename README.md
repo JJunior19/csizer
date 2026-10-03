@@ -11,13 +11,24 @@ binaries.
 
 ## Install
 
+Homebrew (macOS and Linux):
+
 ```sh
 brew install --cask JJunior19/csizer/csizer
 ```
 
-Works on macOS and Linux. The fully qualified name trusts the cask
-automatically, and macOS binaries are signed and notarized. Prefer building
-from source? Use Go 1.26.5 and run `make build`.
+npm or pnpm (Node 18+):
+
+```sh
+npm install -g csizer
+# or
+pnpm add -g csizer
+```
+
+All channels serve the same release binaries; macOS binaries are signed and
+notarized, and npm resolves the platform binary at install time without
+postinstall scripts. Prefer building from source? Use Go 1.26.5 and run
+`make build`.
 
 ## Quick start
 

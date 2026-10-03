@@ -23,6 +23,9 @@ release, and updates the Homebrew cask.
 7. Store the following repository secrets in `JJunior19/csizer`:
    `MACOS_SIGN_P12`, `MACOS_SIGN_PASSWORD`, `MACOS_NOTARY_KEY`,
    `MACOS_NOTARY_KEY_ID`, and `MACOS_NOTARY_ISSUER_ID`.
+8. Create an npm automation token and store it as the `NPM_TOKEN` repository
+   secret. The Release workflow publishes the `csizer` wrapper and one
+   platform package per supported OS and architecture to the npm registry.
 
 The tap repository and the `TAP_GITHUB_TOKEN` secret must exist before the first
 release, because GoReleaser pushes the generated cask to the tap. The built-in

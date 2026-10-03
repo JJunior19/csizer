@@ -1,6 +1,6 @@
 # ContainerSize roadmap
 
-**Current state:** Phases 1-10 are complete. Phase 11 (npm and pnpm packaging) is in progress: automation is committed, the first npm release is pending. Last updated: 2026-10-03.
+**Current state:** Phases 1-11 are complete. Phase 12 (documentation and hardening) is next. Last updated: 2026-10-04.
 
 This document is the single source of truth for mutable project progress.
 
@@ -28,7 +28,7 @@ This document is the single source of truth for mutable project progress.
 | 8 | ECS Fargate adapter | Complete | Translate normalized recommendations into valid ECS Fargate CPU and memory settings. | `bf96f82` |
 | 9 | CLI tracking, query, and outputs | Complete | Expose tracking and query workflows with stable human-readable and machine-readable output. | `8e811dd` |
 | 10 | Homebrew and release | Complete | v0.1.1 published from versioned tags with signed and notarized macOS binaries; the tap serves the cask and `brew install --cask JJunior19/csizer/csizer` is verified end to end on macOS. | `0de13f4` |
-| 11 | npm and pnpm packaging | Partial | The npm wrapper, platform packages, and release publishing and verification are committed (`ff7b1f6`); the first npm release is pending. | `ff7b1f6` |
+| 11 | npm and pnpm packaging | Complete | v0.1.3 publishes the `csizer` wrapper and four platform packages to npm from tagged releases; the release job installs with npm and pnpm and verifies the reported version. | `0ca122f` |
 | 12 | Documentation and hardening | Pending | Complete operator and contributor documentation, compatibility checks, privacy review, and release hardening. | - |
 
 ## Phase 10 (complete) — next work unit: phase 11
@@ -45,7 +45,7 @@ Out of scope for phase 10: npm and pnpm packaging.
 | # | Acceptance criterion | Status | Evidence or gap |
 | --- | --- | --- | --- |
 | 1 | Install `csizer` through Homebrew. | Complete | v0.1.1 serves the cask from `JJunior19/homebrew-csizer`; `brew install --cask JJunior19/csizer/csizer` is verified end to end on macOS. |
-| 2 | Install `csizer` through `pnpm add -g`. | Pending | npm and pnpm packaging is phase 11. |
+| 2 | Install `csizer` through `pnpm add -g`. | Complete | The verify-npm release job installs csizer@0.1.3 with pnpm and checks the reported version. |
 | 3 | Discover Docker containers with `csizer docker list`. | Complete | Docker discovery and the identity resolver are committed. |
 | 4 | Resolve a Compose service with `csizer track backend`. | Complete | The tracking command resolves and persists a discovered Docker workload. |
 | 5 | Keep collecting after the foreground CLI exits. | Complete | The background daemon owns collection independently of the foreground CLI. |
@@ -58,7 +58,7 @@ Out of scope for phase 10: npm and pnpm packaging.
 | 12 | Preserve the local-first privacy boundary. | Complete | Current Docker discovery reads minimal identity/status metadata, sends no telemetry, and documents excluded application data. |
 | 13 | Support JSON for important query commands. | Complete | Tracking and query commands emit versioned JSON with `--json`. |
 | 14 | Enforce tests and cross-platform checks in CI. | Complete | CI runs formatting, vet, lint, race tests, and Linux/macOS builds. |
-| 15 | Create release binaries, a Homebrew cask, and npm packages from a release. | Partial | Tags produce signed and notarized binaries plus the Homebrew cask (v0.1.1); npm packaging is phase 11. |
+| 15 | Create release binaries, a Homebrew cask, and npm packages from a release. | Complete | A tagged release produces signed and notarized binaries, the Homebrew cask, and the npm wrapper plus platform packages (v0.1.3). |
 
 ## Maintenance
 

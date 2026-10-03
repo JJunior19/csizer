@@ -4,6 +4,7 @@
 .cursor/
 bin/
 dist/
+build/
 coverage.out
 *.db
 *.db-shm

@@ -1,0 +1,30 @@
+{
+  "name": "csizer",
+  "version": "0.0.0-dev",
+  "description": "Evidence-based container workload tracking and ECS Fargate sizing recommendations (installs the csizer native binary)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JJunior19/csizer.git"
+  },
+  "bin": {
+    "csizer": "bin/csizer.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "docker",
+    "containers",
+    "ecs",
+    "fargate",
+    "sizing",
+    "capacity"
+  ],
+  "optionalDependencies": {
+    "csizer-darwin-amd64": "0.0.0-dev",
+    "csizer-darwin-arm64": "0.0.0-dev",
+    "csizer-linux-amd64": "0.0.0-dev",
+    "csizer-linux-arm64": "0.0.0-dev"
+  }
+}

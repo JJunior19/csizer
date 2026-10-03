@@ -36,6 +36,23 @@ jobs:
           MACOS_NOTARY_KEY: ${{ secrets.MACOS_NOTARY_KEY }}
           MACOS_NOTARY_KEY_ID: ${{ secrets.MACOS_NOTARY_KEY_ID }}
           MACOS_NOTARY_ISSUER_ID: ${{ secrets.MACOS_NOTARY_ISSUER_ID }}
+      - name: Set up Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      - name: Build npm packages
+        run: ./scripts/build-npm-packages.sh dist "${GITHUB_REF_NAME#v}"
+      - name: Publish npm packages
+        run: |
+          # Platform packages first, then the main wrapper that depends on
+          # them, so an install racing the publish never resolves a partial
+          # release.
+          for package_dir in build/npm/csizer-* build/npm/csizer; do
+            npm publish "$package_dir"
+          done
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   verify-homebrew:
     name: Verify Homebrew installation
@@ -50,3 +67,54 @@ jobs:
           HOMEBREW_NO_INSTALL_CLEANUP: "1"
           CSIZER_VERSION: ${{ github.ref_name }}
         run: ./scripts/verify-homebrew-install.sh
+
+  verify-npm:
+    name: Verify npm and pnpm installation
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - name: Wait for the registry to serve the new version
+        env:
+          CSIZER_VERSION: ${{ github.ref_name }}
+        run: |
+          version="${CSIZER_VERSION#v}"
+          for attempt in $(seq 1 18); do
+            if npm view "csizer@${version}" version >/dev/null 2>&1; then
+              echo "csizer@${version} is visible on the registry"
+              exit 0
+            fi
+            echo "attempt ${attempt}/18: csizer@${version} not visible yet, retrying in 10s"
+            sleep 10
+          done
+          echo "error: csizer@${version} did not appear on the registry" >&2
+          exit 1
+      - name: Install and verify with npm
+        env:
+          CSIZER_VERSION: ${{ github.ref_name }}
+        run: |
+          version="${CSIZER_VERSION#v}"
+          npm install -g "csizer@${version}"
+          reported="$(csizer version | tr ' ' '\n' | sed -n 's/^version=//p')"
+          if [[ "$reported" != "$version" ]]; then
+            echo "error: npm install reported version ${reported}, expected ${version}" >&2
+            exit 1
+          fi
+      - name: Install and verify with pnpm
+        env:
+          CSIZER_VERSION: ${{ github.ref_name }}
+        run: |
+          version="${CSIZER_VERSION#v}"
+          pnpm add -g "csizer@${version}"
+          reported="$("$(pnpm bin -g)/csizer" version | tr ' ' '\n' | sed -n 's/^version=//p')"
+          if [[ "$reported" != "$version" ]]; then
+            echo "error: pnpm install reported version ${reported}, expected ${version}" >&2
+            exit 1
+          fi

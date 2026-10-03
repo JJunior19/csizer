@@ -34,7 +34,7 @@ This document is the single source of truth for mutable project progress.
 ## Next work unit: phase 10
 
 - [x] Build versioned release binaries for supported macOS and Linux targets.
-- [ ] Publish and verify a Homebrew cask that resolves those release binaries. Blocked until the `JJunior19/homebrew-csizer` repository and the `TAP_GITHUB_TOKEN` secret exist.
+- [ ] Publish and verify a Homebrew cask that resolves those release binaries. The `JJunior19/homebrew-csizer` repository exists; blocked until the `TAP_GITHUB_TOKEN` secret exists and the first tagged release runs.
 - [x] Automate release publication from versioned tags.
 - [x] Add installation verification for Homebrew users.
 

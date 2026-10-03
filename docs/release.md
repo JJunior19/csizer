@@ -6,8 +6,10 @@ release, and updates the Homebrew cask.
 
 ## One-time setup
 
-1. Create the public tap repository `JJunior19/homebrew-csizer` with a README so
-   its default `main` branch exists.
+1. ~~Create the public tap repository `JJunior19/homebrew-csizer` with a README
+   so its default branch exists.~~ Done — the tap lives at
+   `JJunior19/homebrew-csizer` and its default branch is `master`, which is the
+   branch GoReleaser pushes to.
 2. Create a personal access token that can push contents to
    `JJunior19/homebrew-csizer`.
 3. Store that token as the `TAP_GITHUB_TOKEN` repository secret in

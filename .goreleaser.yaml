@@ -62,7 +62,7 @@ homebrew_casks:
     repository:
       owner: JJunior19
       name: homebrew-csizer
-      branch: main
+      branch: master
       token: "{{ .Env.TAP_GITHUB_TOKEN }}"
     binaries:
       - csizer

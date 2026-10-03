@@ -40,12 +40,16 @@ targets=(darwin-arm64 darwin-amd64 linux-arm64 linux-amd64)
 for target in "${targets[@]}"; do
   os=${target%-*}
   arch=${target#*-}
-  binary="$dist_dir/csizer_${os}_${arch}_v1/csizer"
+  # GoReleaser names build dirs with the Go feature-level suffix for the
+  # target (e.g. csizer_linux_arm64_v8.0, csizer_darwin_amd64_v1), so the
+  # suffix is matched with a wildcard instead of assumed.
+  build_dir=$(find "$dist_dir" -maxdepth 1 -type d -name "csizer_${os}_${arch}*" -print -quit)
 
-  [[ -x "$binary" ]] || {
-    echo "error: executable binary not found for $target: $binary" >&2
+  [[ -n "$build_dir" && -x "$build_dir/csizer" ]] || {
+    echo "error: executable binary not found for $target: $build_dir/csizer" >&2
     exit 1
   }
+  binary="$build_dir/csizer"
 
   pkg_dir="$out_dir/csizer-$target"
   mkdir -p "$pkg_dir/bin"

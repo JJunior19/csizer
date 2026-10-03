@@ -22,9 +22,9 @@
     "capacity"
   ],
   "optionalDependencies": {
-    "csizer-darwin-amd64": "0.0.0-dev",
     "csizer-darwin-arm64": "0.0.0-dev",
-    "csizer-linux-amd64": "0.0.0-dev",
-    "csizer-linux-arm64": "0.0.0-dev"
+    "csizer-darwin-x64": "0.0.0-dev",
+    "csizer-linux-arm64": "0.0.0-dev",
+    "csizer-linux-x64": "0.0.0-dev"
   }
 }

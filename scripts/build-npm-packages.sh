@@ -35,15 +35,22 @@ repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 npm_src="$repo_root/npm"
 out_dir="$repo_root/build/npm"
 
-targets=(darwin-arm64 darwin-amd64 linux-arm64 linux-amd64)
+# npm names cpu fields with Node conventions (x64), while GoReleaser names
+# its build dirs with Go conventions (amd64); the go_arch mapping below is
+# the only place the two vocabularies meet.
+targets=(darwin-arm64 darwin-x64 linux-arm64 linux-x64)
 
 for target in "${targets[@]}"; do
   os=${target%-*}
-  arch=${target#*-}
+  cpu=${target#*-}
+  go_arch=$cpu
+  if [[ "$cpu" == "x64" ]]; then
+    go_arch="amd64"
+  fi
   # GoReleaser names build dirs with the Go feature-level suffix for the
   # target (e.g. csizer_linux_arm64_v8.0, csizer_darwin_amd64_v1), so the
   # suffix is matched with a wildcard instead of assumed.
-  build_dir=$(find "$dist_dir" -maxdepth 1 -type d -name "csizer_${os}_${arch}*" -print -quit)
+  build_dir=$(find "$dist_dir" -maxdepth 1 -type d -name "csizer_${os}_${go_arch}*" -print -quit)
 
   [[ -n "$build_dir" && -x "$build_dir/csizer" ]] || {
     echo "error: executable binary not found for $target: $build_dir/csizer" >&2
@@ -60,7 +67,7 @@ for target in "${targets[@]}"; do
 {
   "name": "csizer-$target",
   "version": "$version",
-  "description": "csizer native binary for $os/$arch",
+  "description": "csizer native binary for $os/$cpu",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -70,7 +77,7 @@ for target in "${targets[@]}"; do
     "$os"
   ],
   "cpu": [
-    "$arch"
+    "$cpu"
   ],
   "files": [
     "bin"

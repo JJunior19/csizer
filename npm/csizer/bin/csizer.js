@@ -8,9 +8,8 @@
 
 const { spawnSync } = require('child_process');
 
-const archByNodeArch = { arm64: 'arm64', x64: 'amd64' };
-const nodeArch = archByNodeArch[process.arch];
 const platform = process.platform;
+const arch = process.arch; // npm package suffixes use Node arch names: arm64, x64
 
 function fail(message) {
   process.stderr.write(`csizer: ${message}\n`);
@@ -21,11 +20,11 @@ if (platform !== 'darwin' && platform !== 'linux') {
   fail(`unsupported platform "${platform}"; csizer ships binaries for macOS and Linux only`);
 }
 
-if (!nodeArch) {
-  fail(`unsupported architecture "${process.arch}"; csizer ships amd64 and arm64 binaries only`);
+if (arch !== 'arm64' && arch !== 'x64') {
+  fail(`unsupported architecture "${arch}"; csizer ships arm64 and x64 binaries only`);
 }
 
-const packageName = `csizer-${platform}-${nodeArch}`;
+const packageName = `csizer-${platform}-${arch}`;
 
 let binaryPath;
 try {

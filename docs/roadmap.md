@@ -27,14 +27,14 @@ This document is the single source of truth for mutable project progress.
 | 7 | Recommendation and confidence | Complete | Produce CPU and memory recommendations with evidence, confidence, assumptions, and warnings. | `780c294` |
 | 8 | ECS Fargate adapter | Complete | Translate normalized recommendations into valid ECS Fargate CPU and memory settings. | `bf96f82` |
 | 9 | CLI tracking, query, and outputs | Complete | Expose tracking and query workflows with stable human-readable and machine-readable output. | `8e811dd` |
-| 10 | Homebrew and release | Partial | Versioned release binaries, tag-driven release automation, and Homebrew cask publishing and verification are committed. The first published release is pending. | `e280cbd` |
+| 10 | Homebrew and release | Complete | v0.1.1 published from versioned tags with signed and notarized macOS binaries; the tap serves the cask and `brew install --cask JJunior19/csizer/csizer` is verified end to end on macOS. | `0de13f4` |
 | 11 | npm and pnpm packaging | Pending | Add npm and pnpm wrappers with platform binary resolution and installation verification. | - |
 | 12 | Documentation and hardening | Pending | Complete operator and contributor documentation, compatibility checks, privacy review, and release hardening. | - |
 
-## Next work unit: phase 10
+## Phase 10 (complete) — next work unit: phase 11
 
 - [x] Build versioned release binaries for supported macOS and Linux targets.
-- [ ] Publish and verify a Homebrew cask that resolves those release binaries. The `JJunior19/homebrew-csizer` repository exists; blocked until the `TAP_GITHUB_TOKEN` secret exists and the first tagged release runs.
+- [x] Publish and verify a Homebrew cask that resolves those release binaries. v0.1.1 is live with signed and notarized macOS binaries, and `brew install --cask JJunior19/csizer/csizer` is verified end to end.
 - [x] Automate release publication from versioned tags.
 - [x] Add installation verification for Homebrew users.
 

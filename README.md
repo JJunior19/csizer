@@ -2,7 +2,7 @@
 
 ContainerSize is a local-first tool for discovering container workloads and, in later phases, recommending CPU and memory settings from collected evidence.
 
-**Status:** Local Docker tracking, background collection, workload analysis, and ECS Fargate recommendations are available. The first Homebrew release (v0.1.0) is published.
+**Status:** Local Docker tracking, background collection, workload analysis, and ECS Fargate recommendations are available. The Homebrew release (v0.1.1) is published with signed and notarized macOS binaries.
 
 ## Installation
 

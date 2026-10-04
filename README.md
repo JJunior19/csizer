@@ -124,9 +124,12 @@ Local-first by design:
 
 | Doc | Contents |
 |-----|----------|
+| [docs/operations.md](docs/operations.md) | Compatibility, configuration, daemon lifecycle, data, troubleshooting |
+| [docs/privacy.md](docs/privacy.md) | Data inventory and the local-first review |
+| [docs/development.md](docs/development.md) | Setup, layout, and conventions for contributors |
 | [docs/architecture.md](docs/architecture.md) | Package boundaries, runtime and SQLite design, risks |
-| [docs/roadmap.md](docs/roadmap.md) | Phase status: 1-10 complete, phase 11 (npm and pnpm packaging) next |
-| [docs/release.md](docs/release.md) | Release process and Homebrew packaging |
+| [docs/roadmap.md](docs/roadmap.md) | Delivery phases, MVP acceptance, and maintenance rules |
+| [docs/release.md](docs/release.md) | Release process and packaging |
 
 ## Contributing
 

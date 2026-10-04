@@ -8,10 +8,15 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   release:
     name: Build and publish release
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
@@ -58,6 +63,7 @@ jobs:
     name: Verify Homebrew installation
     needs: release
     runs-on: macos-latest
+    timeout-minutes: 25
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
@@ -72,6 +78,7 @@ jobs:
     name: Verify npm and pnpm installation
     needs: release
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Set up Node
         uses: actions/setup-node@v5

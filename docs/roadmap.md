@@ -1,6 +1,6 @@
 # ContainerSize roadmap
 
-**Current state:** Phases 1-11 are complete. Phase 12 (documentation and hardening) is next. Last updated: 2026-10-04.
+**Current state:** Phases 1-12 are complete. The delivery plan is finished; future work units belong in GitHub issues and milestones. Last updated: 2026-10-04.
 
 This document is the single source of truth for mutable project progress.
 
@@ -29,9 +29,9 @@ This document is the single source of truth for mutable project progress.
 | 9 | CLI tracking, query, and outputs | Complete | Expose tracking and query workflows with stable human-readable and machine-readable output. | `8e811dd` |
 | 10 | Homebrew and release | Complete | v0.1.1 published from versioned tags with signed and notarized macOS binaries; the tap serves the cask and `brew install --cask JJunior19/csizer/csizer` is verified end to end on macOS. | `0de13f4` |
 | 11 | npm and pnpm packaging | Complete | v0.1.3 publishes the `csizer` wrapper and four platform packages to npm from tagged releases; the release job installs with npm and pnpm and verifies the reported version. | `0ca122f` |
-| 12 | Documentation and hardening | Pending | Complete operator and contributor documentation, compatibility checks, privacy review, and release hardening. | - |
+| 12 | Documentation and hardening | Complete | Operator, development, and privacy guides with a documented compatibility matrix; release workflow gained a concurrency group and job timeouts. | `89c48b3`, `e473206` |
 
-## Phase 10 (complete) — next work unit: phase 11
+## Phase 10 (complete)
 
 - [x] Build versioned release binaries for supported macOS and Linux targets.
 - [x] Publish and verify a Homebrew cask that resolves those release binaries. v0.1.1 is live with signed and notarized macOS binaries, and `brew install --cask JJunior19/csizer/csizer` is verified end to end.
@@ -39,6 +39,21 @@ This document is the single source of truth for mutable project progress.
 - [x] Add installation verification for Homebrew users.
 
 Out of scope for phase 10: npm and pnpm packaging.
+
+## Phase 11 (complete)
+
+- [x] Add the npm wrapper package and platform packages with per-platform binary resolution.
+- [x] Publish the npm packages from tagged releases with `NPM_TOKEN`.
+- [x] Verify npm and pnpm installation in the release pipeline; v0.1.3 is live and verified.
+
+Out of scope for phase 11: changes to the Homebrew distribution.
+
+## Phase 12 (complete)
+
+- [x] Operator, development, and privacy documentation with a documented compatibility matrix.
+- [x] Release workflow hardening: concurrency group and job timeouts.
+
+The delivery phases are complete.
 
 ## MVP acceptance
 
